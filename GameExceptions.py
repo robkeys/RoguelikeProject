@@ -1,0 +1,2 @@
+class NotValidMapLocation(Exception):
+    pass
