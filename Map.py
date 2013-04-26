@@ -10,6 +10,7 @@
 #--------------------------------------------------------------------------
 import BaseGameObj
 import GameExceptions
+import random
 
 
 class ObjectMap(object):
@@ -43,20 +44,25 @@ class ObjectMap(object):
         """
         return self.mapArray
 
-    def getMap(self, minInd=0, maxInd=0):
+    def getMap(self, minInd, maxInd):
         """
         Uses map array to return map as a str
 
         minInd, maxInd - tuple, tuple - the two corners of the map to draw
         """
         newMapStr = ""
-        for row in range(len(self.mapArray)):
-            for col in self.mapArray[row]:
-                if col is None:
+        yCount = minInd[1]
+        while yCount < maxInd[1]:
+            xCount = minInd[0]
+            while xCount < maxInd[0]:
+                space = self.mapArray[xCount][yCount]
+                if space is None:
                     newMapStr += '#'
                 else:
-                    newMapStr += col.getChar()
+                    newMapStr += space.getChar()
+                xCount += 1
             newMapStr += "\n"
+            yCount += 1
         self.setMap(newMapStr)
         return self.mapStr
 
@@ -69,7 +75,10 @@ class ObjectMap(object):
         """
         maxX, maxY = self.getMaxX() - 1, self.getMaxY() - 1
         if x in range(1, maxX) and y in range(1, maxY):
-            return BaseGameObj.BaseGameObj(x, y)
+            if random.random() > 0.01:
+                return BaseGameObj.BaseGameObj(x, y)
+            else:
+                return None
         elif x == maxX or x == 0 or y == maxY or y == 0:
             return None
         else:
@@ -90,12 +99,12 @@ class ObjectMap(object):
                 mapArray[row].append(self.createBaseMap(row, col))
         return mapArray
 
-    def drawMap(self):
+    def drawMap(self, minInd, maxInd):
         """
         generator that spits out one character of the map at a time for to
         be blitted. Might be usefull to assign colors here as well?
         """
-        newMapStr = self.getMap()
+        newMapStr = self.getMap(minInd, maxInd)
         while newMapStr != "":
             char = newMapStr[0]
             newMapStr = newMapStr[1:]

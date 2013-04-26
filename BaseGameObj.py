@@ -9,13 +9,17 @@
 # Licence:     <your licence>
 #--------------------------------------------------------------------------
 import GameExceptions
+import random
+import _ENV_VAR as _E
 
 
 class BaseGameObj(object):
 
     def __init__(self, x=-1, y=-1):
         self.setPos(x, y)     # The position of this object
-        self.char = '.'      # The character that represents this object.
+        self.char = random.choice(['.', '.', '.', "'", ',', ';', ':'])
+        self.color = random.choice([_E.grey01, _E.grey02, _E.grey03,
+                                    _E.grey04, _E.grey05])
         self.space = None
 
     def setPos(self, x, y):
@@ -44,12 +48,13 @@ class BaseGameObj(object):
 
     def getChar(self):
         """
-        Returns a single character string.
+        Returns four variables to be passed to a font object.
         """
         if self.space is None:
-            return self.char
+            char = self.char
         else:
-            return self.space.getChar()
+            char = self.space.getChar()
+        return char  # , 1, self.color, _E.black
 
     def fillSpace(self, gameObject):
         """
@@ -73,6 +78,7 @@ class Player(BaseGameObj):
     def __init__(self, x, y):
         super(Player, self).__init__(x, y)
         self.char = '@'
+        self.color = _E.white
 
 
 def main():
