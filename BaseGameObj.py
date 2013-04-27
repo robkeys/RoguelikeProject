@@ -53,7 +53,7 @@ class BaseGameObj(object):
         if self.space is None:
             char = self.char
             newChar = (char, 1, self.color, _E.black)
-            print str(newChar)
+            # print str(newChar)
             return newChar
         else:
             return self.space.getChar()

@@ -42,6 +42,13 @@ class Game(object):
         # other variables
         self.met = self.font.metrics('@')[0]
 
+    def setDisplay(self, size, args):
+        """
+        Sets the display
+        """
+        self.screen = pygame.display.set_mode(size, args)
+        self.wSize = size
+
     def setFont(self, fontName, fontSize):
         """
         Just sets the font. No big.
@@ -105,7 +112,7 @@ class Game(object):
         Returns - x, y - coords of top right corner of map area.
         """
         winX = self.wSize[0] / self.met[1]        # using win size
-        winY = self.wSize[1] / (self.met[4] + 8)  # get viewable area
+        winY = self.wSize[1] / (self.met[4] + 8)       # get viewable area
         # map max coord
         ext = self.lvlMap.getMaxX(), self.lvlMap.getMaxY()
         if ext[0] < winX:   # |
@@ -157,8 +164,8 @@ class Game(object):
             else:
                 if char[0] in ['#', '@']:
                     self.setFont("courbd.ttf", self.fontSize)
-                print "char: ", str(char)
-                print "char[0]: ", str(char[0])
+                # print "char: ", str(char)
+                # print "char[0]: ", str(char[0])
                 mapText = self.font.render(char[0], char[1], char[2], char[3])
                 self.screen.blit(mapText, (drawX, drawY))
                 self.setFont(self.fontName, self.fontSize)
