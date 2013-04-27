@@ -52,9 +52,12 @@ class BaseGameObj(object):
         """
         if self.space is None:
             char = self.char
+            newChar = (char, 1, self.color, _E.black)
+            print str(newChar)
+            return newChar
         else:
-            char = self.space.getChar()
-        return char  # , 1, self.color, _E.black
+            return self.space.getChar()
+
 
     def fillSpace(self, gameObject):
         """
@@ -78,7 +81,13 @@ class Player(BaseGameObj):
     def __init__(self, x, y):
         super(Player, self).__init__(x, y)
         self.char = '@'
-        self.color = _E.white
+        self.color = _E.blue
+
+    def getChar(self):
+        """
+        returns tuple representing pygames font render args
+        """
+        return (self.char, 1, self.color, _E.black)
 
 
 def main():

@@ -11,20 +11,21 @@
 import BaseGameObj
 import GameExceptions
 import random
+import _ENV_VAR as _E
 
 
 class ObjectMap(object):
 
     def __init__(self, x, y):
         self.x, self.y = x, y
-        self.mapStr = ""
+        self.mapList = ""
         self.mapArray = self.makeMap(x, y)
 
-    def setMap(self, mapStr):
+    def setMap(self, mapList):
         """
-        Takes str as argument and sets to self.mapStr
+        Takes str as argument and sets to self.mapList
         """
-        self.mapStr = mapStr
+        self.mapList = mapList
 
     def getMaxX(self):
         """
@@ -50,21 +51,21 @@ class ObjectMap(object):
 
         minInd, maxInd - tuple, tuple - the two corners of the map to draw
         """
-        newMapStr = ""
+        newMapList = []
         yCount = minInd[1]
         while yCount < maxInd[1]:
             xCount = minInd[0]
             while xCount < maxInd[0]:
                 space = self.mapArray[xCount][yCount]
                 if space is None:
-                    newMapStr += '#'
+                    newMapList.append(('#', 1, _E.white, _E.black))
                 else:
-                    newMapStr += space.getChar()
+                    newMapList.append(space.getChar())
                 xCount += 1
-            newMapStr += "\n"
+            newMapList.append((0, 0, 0, 0))
             yCount += 1
-        self.setMap(newMapStr)
-        return self.mapStr
+        self.setMap(newMapList)
+        return self.mapList
 
     def createBaseMap(self, x, y):
         """
@@ -104,10 +105,9 @@ class ObjectMap(object):
         generator that spits out one character of the map at a time for to
         be blitted. Might be usefull to assign colors here as well?
         """
-        newMapStr = self.getMap(minInd, maxInd)
-        while newMapStr != "":
-            char = newMapStr[0]
-            newMapStr = newMapStr[1:]
+        newMapList = self.getMap(minInd, maxInd)
+        while newMapList != []:
+            char = newMapList.pop(0)
             yield char
 
     def testMapPos(self, pos):

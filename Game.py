@@ -26,17 +26,37 @@ class Game(object):
         self.wSize = [700, 500]  # <-- something better here
         self.screen = pygame.display.set_mode(self.wSize, pygame.RESIZABLE)
         self.clock = pygame.time.Clock()
-        self.font = pygame.font.SysFont('Courier', 24)
+        self.font = None
+        self.fontName = "cour.ttf"
+        self.fontSize = 24
+        self.fontDict = {}
 
         # intial game objects.
         self.lvlMap = Map.ObjectMap(70, 50)
         self.player = BaseGameObj.Player(1, 1)
 
+        # Initial declarations
+        self.setFont(self.fontName, self.fontSize)
+        self.setCaption("RoguelikeProject")
+
         # other variables
         self.met = self.font.metrics('@')[0]
 
-        # Initial declarations
-        self.setCaption("RoguelikeProject")
+    def setFont(self, fontName, fontSize):
+        """
+        Just sets the font. No big.
+        """
+        try:
+            self.font = self.fontDict[fontName]
+        except KeyError:
+            self.createFont(fontName, fontSize)
+
+    def createFont(self, fontName, fontSize):
+        """
+        Creates fonts. Crazy.
+        """
+        self.font = pygame.font.Font(fontName, fontSize)
+        self.fontDict[fontName] = self.font
 
     def setCaption(self, caption):
         """
@@ -131,12 +151,17 @@ class Game(object):
         minInd, maxInd = self.m_FindDrawnArea()
         drawX, drawY = 0, 0
         for char in self.lvlMap.drawMap(minInd, maxInd):
-            if char == '\n':
+            if char[0] == 0:
                 drawX = 0
                 drawY += self.met[4] + 8
             else:
-                mapText = self.font.render(char, 1, _E.white, _E.black)
+                if char[0] in ['#', '@']:
+                    self.setFont("courbd.ttf", self.fontSize)
+                print "char: ", str(char)
+                print "char[0]: ", str(char[0])
+                mapText = self.font.render(char[0], char[1], char[2], char[3])
                 self.screen.blit(mapText, (drawX, drawY))
+                self.setFont(self.fontName, self.fontSize)
                 drawX += self.met[1]
 
         # Limit to 20 frames per second

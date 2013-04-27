@@ -35,6 +35,9 @@ while not done:
             if event.key == pygame.K_RIGHT:
                 game.o_UpdateObj(game.getPlayer(), 1, 0)
 
+        # elif event.type == pygame.KEYUP:
+            # game.o_UpdateObj(game.getPlayer(), 0, 0)
+
         game.newFrame()
 
 # Be IDLE friendly. If you forget this line, the program will 'hang'
