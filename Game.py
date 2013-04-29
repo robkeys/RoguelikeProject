@@ -2,16 +2,24 @@
 # Name:         Game
 # Purpose:      Controls aspects of running game
 #
-# Author:      robk
+# Author:      Rob Keys
 #
 # Created:     05/04/2013
-# Copyright:   (c) robk 2013
-# Licence:     <your licence>
+# Copyright:   (c) 2013, Rob Keys
+# Licence:     This software is distributed in the hope that it will
+# be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
+# of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with the software; If not, see <http://www.gnu.org/licenses/>.
 #--------------------------------------------------------------------------
 import pygame
 import BaseGameObj
+import Monsters
 import Map
 import GameExceptions
+import random
 import _ENV_VAR as _E
 
 
@@ -34,6 +42,7 @@ class Game(object):
         # intial game objects.
         self.lvlMap = Map.ObjectMap(70, 50)
         self.player = BaseGameObj.Player(1, 1)
+        self.monsters = Monsters.Monsters()
 
         # Initial declarations
         self.setFont(self.fontName, self.fontSize)
@@ -77,6 +86,56 @@ class Game(object):
         """
         return self.player
 
+    def o_GenMonsters(self, numMonsters):
+        """
+        Finds a valid map location and inserts a monster.
+        """
+        lenX = self.lvlMap.getMaxX()
+        lenY = self.lvlMap.getMaxY()
+        for monster in xrange(numMonsters):
+            self.monsters.addMonster((0, 0))
+            newMonster = self.monsters.getMonster()
+            while True:
+                x = random.randrange(lenX)
+                y = random.randrange(lenY)
+                pos = (x, y)
+                newMonster.setPos(x, y)
+                self.o_UpdateObj(newMonster, x, y)
+                if newMonster.getPos() == pos:
+                    break
+
+    def o_ValidateMonsterMove(self, pos):
+        """
+        Returns True if move was successfull
+        """
+        try:
+            return self.lvlMap.testMapPos(pos)
+        except GameExceptions.NotValidMapLocation:
+            return False
+
+
+    def o_MoveMonsters(self):
+        """
+        Moves all living monsters
+        """
+        count = 0
+        for monster in self.monsters.iterMonsters():
+            count += 1
+            if monster.getAlive():
+                for i in xrange(5):
+                    oldPos = monster.getPos()
+                    newPos = monster.move(self.player.getPos())
+                    currPos = (oldPos[0] + newPos[0],
+                               oldPos[1] + newPos[1])
+                    print str(oldPos), str(newPos)
+                    self.o_UpdateObj(monster, newPos[0], newPos[1])
+                    if monster.getPos() == currPos:
+                        print "old", str(count), "=", str(oldPos)
+                        print "move", str(count), "=", str(newPos)
+                        break
+                    else:
+                        monster.setPos(oldPos[0], oldPos[1])
+
     def o_UpdateObj(self, gameObject, newX, newY):
         """
         This function takes a game object as an argument as well as the
@@ -92,13 +151,14 @@ class Game(object):
         try:
             # check if valid position while assigning var
             newMapPos = self.lvlMap.getMapObject(newPos)
-        except GameExceptions.NotValidMapLocation as err:
-            # oop. Not really there.
-            print err.args
-        else:
             oldMapPos = self.lvlMap.getMapObject(oldPos)
-            # all vars set. we move the gameObj to the new space
             newMapPos.fillSpace(gameObject)
+        except GameExceptions.NotValidMapLocation:  # as err:
+            # oop. Not really there.
+            # print err.args
+            pass
+        else:
+            # all vars set. we move the gameObj to the new space
             # empty the old space
             oldMapPos.emptySpace()
             # and inform the gameObj of it's new home

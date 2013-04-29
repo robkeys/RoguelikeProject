@@ -2,13 +2,20 @@
 # Name:     BaseGameObj
 # Purpose:  Handles all whatsis realted to characters.
 #
-# Author:      robk
+# Author:      Rob Keys
 #
 # Created:     05/04/2013
-# Copyright:   (c) robk 2013
-# Licence:     <your licence>
+# Copyright:   (c) 2013, Rob Keys
+# Licence:     This software is distributed in the hope that it will
+# be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
+# of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with the software; If not, see <http://www.gnu.org/licenses/>.
 #--------------------------------------------------------------------------
 import GameExceptions
+from math import sqrt as sqrt
 import random
 import _ENV_VAR as _E
 
@@ -67,7 +74,7 @@ class BaseGameObj(object):
         if self.space is None:
             self.space = gameObject
         else:
-            raise Exception("SpaceOccupied")
+            print "SpaceOccupied"
 
     def emptySpace(self):
         """
@@ -88,6 +95,54 @@ class Player(BaseGameObj):
         returns tuple representing pygames font render args
         """
         return (self.char, 1, self.color, _E.black)
+
+class Zombie(Player):
+
+    def __init__(self, x, y):
+        super(Player, self).__init__(x, y)
+        self.char = 'Z'
+        self.color = _E.red
+        self.alive = True
+        self.sightRange = 10
+
+    def getAlive(self):
+        """
+        Returns life status.
+        """
+        return self.alive
+
+    def kill(self):
+        """
+        Makes monster dead.
+        """
+        self.alive = False
+
+    def detectPlayer(self, x1, y1, x2, y2):
+        """
+        If player is detected zombie moves toward it.
+        """
+        if sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2) < self.sightRange:
+            return True
+        else:
+            return False
+
+    def move(self, playerPos):
+        x1, y1 = self.pos[0], self.pos[1]
+        x2, y2 = playerPos[0], playerPos[1]
+        if self.detectPlayer(x1, y1, x2, y2):
+            if x1 > x2: return (-1, 0) #player x smaller
+            if x1 < x2: return (1, 0)  # player x bigger
+            if y1 > y2: return (0, -1) # player y smaller
+            if y1 < y2: return (0, 1)  # player y bigger
+        elif random.random() > 0.5:
+            return (random.choice([-1, 0, 1]), random.choice([-1, 0, 1]))
+        else:
+            return self.pos
+
+    def kickDoor(self):
+        pass  # to do
+
+
 
 
 def main():
