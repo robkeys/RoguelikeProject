@@ -1,6 +1,7 @@
 #--------------------------------------------------------------------------
 # Name:         GameLoop
-# Purpose:      Controls aspects of running game
+# Purpose:     Contains main program loop, and handles game timing and
+#              inputs
 #
 # Author:      Rob Keys
 #

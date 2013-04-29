@@ -1,6 +1,7 @@
 #--------------------------------------------------------------------------
-# Name:     BaseGameObj
-# Purpose:  Handles all whatsis realted to characters.
+# Name:        BaseGameObj
+# Purpose:     Handles all whatsis related to characters, monsters,
+#              NPCs, etc.
 #
 # Author:      Rob Keys
 #
@@ -139,24 +140,23 @@ class Zombie(Player):
         x2, y2 = playerPos[0], playerPos[1]
         if self.detectPlayer(x1, y1, x2, y2):
             x, y = 0, 0
-            if x1 > x2:  #player x smaller
+            if x1 > x2:    # player x smaller
                 x += -1
             elif x1 < x2:  # player x bigger
                 x += 1
-            if y1 > y2:  # player y smaller
+            if y1 > y2:    # player y smaller
                 y += -1
             elif y1 < y2:  # player y bigger
                 y += 1
             return (x, y)
         elif random.random() > 0.7:
-            return (random.choice([-1, 0, 1]), random.choice([-1, 0, 1]))
+            return random.choice([(-1, 0), (1, 0), (-1, 1), (-1, -1),
+                                   (1, -1), (1, 1), (0, -1), (0, 1)])
         else:
-            return self.pos
+            return (0, 0)
 
     def kickDoor(self):
         pass  # to do
-
-
 
 
 def main():

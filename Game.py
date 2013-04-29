@@ -116,16 +116,6 @@ class Game(object):
                 else:
                     break
 
-    def o_ValidateMonsterMove(self, pos):
-        """
-        Returns True if move was successfull
-        """
-        try:
-            return self.lvlMap.testMapPos(pos)
-        except GameExceptions.NotValidMapLocation:
-            return False
-
-
     def o_MoveMonsters(self):
         """
         Moves all living monsters
@@ -165,14 +155,14 @@ class Game(object):
             raise err
         else:
             oldMapPos = self.lvlMap.getMapObject(oldPos)
-            # Fill the new space
-            newMapPos.fillSpace(gameObject)
-            if oldPos != newPos:
+            if oldPos != newPos and newMapPos.testSpace():
+                # Fill the new space
+                newMapPos.fillSpace(gameObject)
                 # empty the old space
                 oldMapPos.emptySpace()
-            # and inform the gameObj of it's new home
-            gameObject.updatePos(newX, newY)
-            print "o_UpdateObj: ", str(gameObject.getPos())
+                # and inform the gameObj of it's new home
+                gameObject.updatePos(newX, newY)
+                # print "o_UpdateObj: ", str(gameObject.getPos())
 
     def m_FindDrawnArea(self):
         """

@@ -1,6 +1,6 @@
 #--------------------------------------------------------------------------
-# Name:         Monsters
-# Purpose:      Used in controling monster objects
+# Name:        Monsters
+# Purpose:     Used by Game object in controlling monster objects.
 #
 # Author:      Rob Keys
 #
