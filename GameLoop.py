@@ -22,7 +22,7 @@ import Game
 def main():
     done = False
     game = Game.Game()
-    game.o_UpdateObj(game.getPlayer(), 0, 0)
+    game.o_UpdateObj(game.p_GetPlayer(), 0, 0)
     game.o_GenMonsters(10)
     # -------- Main Program Loop -----------
     while not done:
@@ -35,17 +35,21 @@ def main():
                 if event.key == pygame.K_ESCAPE:
                     done = True
                 if event.key == pygame.K_UP:
-                    game.o_UpdateObj(game.getPlayer(), 0, -1)
+                    game.p_MovePlayer(0, -1)
                 if event.key == pygame.K_DOWN:
-                    game.o_UpdateObj(game.getPlayer(), 0, 1)
+                    game.p_MovePlayer(0, 1)
                 if event.key == pygame.K_LEFT:
-                    game.o_UpdateObj(game.getPlayer(), -1, 0)
+                    game.p_MovePlayer(-1, 0)
                 if event.key == pygame.K_RIGHT:
-                    game.o_UpdateObj(game.getPlayer(), 1, 0)
+                    game.p_MovePlayer(1, 0)
+                if event.key == pygame.K_PERIOD:
+                    game.p_MovePlayer(0, 0)
+
+                game.o_MoveMonsters()
 
             # elif event.type == pygame.KEYUP:
                 # game.o_UpdateObj(game.getPlayer(), 0, 0)
-            game.o_MoveMonsters()
+
             game.newFrame()
 
     # Be IDLE friendly. If you forget this line, the program will 'hang'

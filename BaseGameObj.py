@@ -65,6 +65,14 @@ class BaseGameObj(object):
         else:
             return self.space.getChar()
 
+    def testSpace(self):
+        """
+        Returns True if empty
+        """
+        if self.space is None:
+            return True
+        else:
+            return False
 
     def fillSpace(self, gameObject):
         """
@@ -130,11 +138,17 @@ class Zombie(Player):
         x1, y1 = self.pos[0], self.pos[1]
         x2, y2 = playerPos[0], playerPos[1]
         if self.detectPlayer(x1, y1, x2, y2):
-            if x1 > x2: return (-1, 0) #player x smaller
-            if x1 < x2: return (1, 0)  # player x bigger
-            if y1 > y2: return (0, -1) # player y smaller
-            if y1 < y2: return (0, 1)  # player y bigger
-        elif random.random() > 0.5:
+            x, y = 0, 0
+            if x1 > x2:  #player x smaller
+                x += -1
+            elif x1 < x2:  # player x bigger
+                x += 1
+            if y1 > y2:  # player y smaller
+                y += -1
+            elif y1 < y2:  # player y bigger
+                y += 1
+            return (x, y)
+        elif random.random() > 0.7:
             return (random.choice([-1, 0, 1]), random.choice([-1, 0, 1]))
         else:
             return self.pos

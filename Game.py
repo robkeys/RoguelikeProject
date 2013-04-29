@@ -80,11 +80,21 @@ class Game(object):
         """
         pygame.display.set_caption(caption)
 
-    def getPlayer(self):
+    def p_GetPlayer(self):
         """
         Returns current player object
         """
         return self.player
+
+    def p_MovePlayer(self, newX, newY):
+        """
+        Updates player pos if no error is raised.
+        """
+        try:
+            self.o_UpdateObj(self.player, newX, newY)
+        except GameExceptions.NotValidMapLocation as err:
+            print err.args
+
 
     def o_GenMonsters(self, numMonsters):
         """
@@ -98,10 +108,12 @@ class Game(object):
             while True:
                 x = random.randrange(lenX)
                 y = random.randrange(lenY)
-                pos = (x, y)
                 newMonster.setPos(x, y)
-                self.o_UpdateObj(newMonster, x, y)
-                if newMonster.getPos() == pos:
+                try:
+                    self.o_UpdateObj(newMonster, x, y)
+                except GameExceptions.NotValidMapLocation:
+                    pass
+                else:
                     break
 
     def o_ValidateMonsterMove(self, pos):
@@ -125,16 +137,14 @@ class Game(object):
                 for i in xrange(5):
                     oldPos = monster.getPos()
                     newPos = monster.move(self.player.getPos())
-                    currPos = (oldPos[0] + newPos[0],
-                               oldPos[1] + newPos[1])
-                    print str(oldPos), str(newPos)
-                    self.o_UpdateObj(monster, newPos[0], newPos[1])
-                    if monster.getPos() == currPos:
+                    try:
+                        self.o_UpdateObj(monster, newPos[0], newPos[1])
+                    except GameExceptions.NotValidMapLocation:
+                        monster.setPos(oldPos[0], oldPos[1])
+                    else:
                         print "old", str(count), "=", str(oldPos)
                         print "move", str(count), "=", str(newPos)
                         break
-                    else:
-                        monster.setPos(oldPos[0], oldPos[1])
 
     def o_UpdateObj(self, gameObject, newX, newY):
         """
@@ -151,18 +161,18 @@ class Game(object):
         try:
             # check if valid position while assigning var
             newMapPos = self.lvlMap.getMapObject(newPos)
-            oldMapPos = self.lvlMap.getMapObject(oldPos)
-            newMapPos.fillSpace(gameObject)
-        except GameExceptions.NotValidMapLocation:  # as err:
-            # oop. Not really there.
-            # print err.args
-            pass
+        except GameExceptions.NotValidMapLocation as err:
+            raise err
         else:
-            # all vars set. we move the gameObj to the new space
-            # empty the old space
-            oldMapPos.emptySpace()
+            oldMapPos = self.lvlMap.getMapObject(oldPos)
+            # Fill the new space
+            newMapPos.fillSpace(gameObject)
+            if oldPos != newPos:
+                # empty the old space
+                oldMapPos.emptySpace()
             # and inform the gameObj of it's new home
             gameObject.updatePos(newX, newY)
+            print "o_UpdateObj: ", str(gameObject.getPos())
 
     def m_FindDrawnArea(self):
         """
