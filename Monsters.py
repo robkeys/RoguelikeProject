@@ -35,11 +35,12 @@ class Monsters(object):
         """
         self.monsters.append(BGO.Zombie(coords[0], coords[1]))
 
+    def remMonster(self, monster):
+        self.monsters.remove(monster)
+
     def iterMonsters(self):
         """
         Generator for updating all monsters in list.
         """
         for monster in self.monsters:
-            yield monster
-
-
+                yield monster

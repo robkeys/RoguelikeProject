@@ -15,11 +15,12 @@
 # along with the software; If not, see <http://www.gnu.org/licenses/>.
 #--------------------------------------------------------------------------
 import pygame
+import random
 import BaseGameObj
 import Monsters
 import Map
 import GameExceptions
-import random
+import Damage as _DMG
 import _ENV_VAR as _E
 
 
@@ -95,7 +96,6 @@ class Game(object):
         except GameExceptions.NotValidMapLocation as err:
             print err.args
 
-
     def o_GenMonsters(self, numMonsters):
         """
         Finds a valid map location and inserts a monster.
@@ -122,8 +122,11 @@ class Game(object):
         """
         count = 0
         for monster in self.monsters.iterMonsters():
-            count += 1
-            if monster.getAlive():
+            if not monster.isAlive():
+                self.o_UpdateObj(monster, kill=True)
+                self.monsters.remMonster(monster)
+            else:
+                count += 1
                 for i in xrange(5):
                     oldPos = monster.getPos()
                     newPos = monster.move(self.player.getPos())
@@ -132,11 +135,11 @@ class Game(object):
                     except GameExceptions.NotValidMapLocation:
                         monster.setPos(oldPos[0], oldPos[1])
                     else:
-                        print "old", str(count), "=", str(oldPos)
-                        print "move", str(count), "=", str(newPos)
+                        #  print "old", str(count), "=", str(oldPos)
+                        #  print "move", str(count), "=", str(newPos)
                         break
 
-    def o_UpdateObj(self, gameObject, newX, newY):
+    def o_UpdateObj(self, gameObject, newX=0, newY=0, kill=False):
         """
         This function takes a game object as an argument as well as the
         change in the map coords of the potential new location of the
@@ -147,22 +150,55 @@ class Game(object):
         newX, newY - int, int - change in objects current map coords
         """
         oldPos = gameObject.getPos()                   # get old position
+        oldMapPos = self.lvlMap.getMapObject(oldPos)   # get map Obj
         newPos = (oldPos[0] + newX, oldPos[1] + newY)  # add new position
-        try:
-            # check if valid position while assigning var
-            newMapPos = self.lvlMap.getMapObject(newPos)
-        except GameExceptions.NotValidMapLocation as err:
-            raise err
+        if kill:
+            oldMapPos.emptySpace()
         else:
-            oldMapPos = self.lvlMap.getMapObject(oldPos)
-            if oldPos != newPos and newMapPos.testSpace():
-                # Fill the new space
-                newMapPos.fillSpace(gameObject)
-                # empty the old space
-                oldMapPos.emptySpace()
-                # and inform the gameObj of it's new home
-                gameObject.updatePos(newX, newY)
-                # print "o_UpdateObj: ", str(gameObject.getPos())
+            try:
+                # check if valid position while assigning var
+                newMapPos = self.lvlMap.getMapObject(newPos)
+            except GameExceptions.NotValidMapLocation as err:
+                raise err
+            else:
+                if oldPos != newPos and newMapPos.testSpace():
+                    # Fill the new space
+                    newMapPos.fillSpace(gameObject)
+                    # empty the old space
+                    oldMapPos.emptySpace()
+                    # and inform the gameObj of it's new home
+                    gameObject.updatePos(newX, newY)
+                    # print "o_UpdateObj: ", str(gameObject.getPos())
+                elif not newMapPos.testSpace():
+                    self.o_Interact(gameObject, newMapPos.getSpace())
+
+    def o_Interact(self, initObj, subject):
+        """
+        Uses context to determine the action the initiator object takes.
+
+        initiator - game object that started the interaction
+        target - game object that is the subject of the interaction
+        """
+        if initObj.isAggressive(subject.getTypes()):  # check if hostile
+            # The following might work best in a combat handling class
+            try:  # Did attack succeed?
+                potentialDmg, dmgTypes = initObj.getDamage(subject.getDef())
+            except Exception as err:
+                print err.args
+            else:
+                dmg = _DMG.Damage(potentialDmg, dmgTypes)
+                dmgMods = []
+                #  Did they dodge & by how much. initObj has a change to
+                #  correct for the dodge with reaction adj.
+                dmgMods.append(subject.dodge(dmg, initObj.getReact()))
+                #  Did armor protect the subject & by how much. Different
+                #  damage types might effect armor differently. Also Armor
+                #  wear and tear could be updated in this step.
+                dmgMods.append(subject.armor(dmg))
+                #  Damage is modified
+                dmg.getDMG(dmgMods)
+                #  The subject now has modified damage applied
+                subject.applyDmg(dmg)
 
     def m_FindDrawnArea(self):
         """
@@ -217,16 +253,16 @@ class Game(object):
         # Blit GameObjects
         minInd, maxInd = self.m_FindDrawnArea()
         drawX, drawY = 0, 0
-        for char in self.lvlMap.drawMap(minInd, maxInd):
-            if char[0] == 0:
+        for tile in self.lvlMap.drawMap(minInd, maxInd):
+            if tile[0] == 0:
                 drawX = 0
                 drawY += self.met[4] + 8
             else:
-                if char[0] in ['#', '@']:
+                if tile[0] in ['#', '@']:
                     self.setFont("courbd.ttf", self.fontSize)
-                # print "char: ", str(char)
-                # print "char[0]: ", str(char[0])
-                mapText = self.font.render(char[0], char[1], char[2], char[3])
+                # print "tile: ", str(tile)
+                # print "tile[0]: ", str(tile[0])
+                mapText = self.font.render(tile[0], tile[1], tile[2], tile[3])
                 self.screen.blit(mapText, (drawX, drawY))
                 self.setFont(self.fontName, self.fontSize)
                 drawX += self.met[1]

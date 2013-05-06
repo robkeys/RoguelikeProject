@@ -7,10 +7,13 @@
 .metadata
 bin/
 tmp/
+!Profiling/
+Trash/
 *.tmp
 *.bak
 *.swp
 *~.nib
+*.nja
 local.properties
 .classpath
 .settings/

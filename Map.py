@@ -66,7 +66,7 @@ class ObjectMap(object):
                 if space is None:
                     newMapList.append(('#', 1, _E.white, _E.black))
                 else:
-                    newMapList.append(space.getChar())
+                    newMapList.append(space.getTile())
                 xCount += 1
             newMapList.append((0, 0, 0, 0))
             yCount += 1
@@ -108,13 +108,13 @@ class ObjectMap(object):
 
     def drawMap(self, minInd, maxInd):
         """
-        generator that spits out one character of the map at a time for to
+        generator that spits out one tileacter of the map at a time for to
         be blitted. Might be usefull to assign colors here as well?
         """
         newMapList = self.getMap(minInd, maxInd)
         while newMapList != []:
-            char = newMapList.pop(0)
-            yield char
+            tile = newMapList.pop(0)
+            yield tile
 
     def testMapPos(self, pos):
         """

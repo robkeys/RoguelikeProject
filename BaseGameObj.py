@@ -1,6 +1,6 @@
 #--------------------------------------------------------------------------
 # Name:        BaseGameObj
-# Purpose:     Handles all whatsis related to characters, monsters,
+# Purpose:     Handles all whatsis related to tileacters, monsters,
 #              NPCs, etc.
 #
 # Author:      Rob Keys
@@ -25,15 +25,15 @@ class BaseGameObj(object):
 
     def __init__(self, x=-1, y=-1):
         self.setPos(x, y)     # The position of this object
-        self.char = random.choice(['.', '.', '.', "'", ',', ';', ':'])
+        self.tile = random.choice(['.', '.', '.', "'", ',', ';', ':'])
         self.color = random.choice([_E.grey01, _E.grey02, _E.grey03,
                                     _E.grey04, _E.grey05])
         self.space = None
 
     def setPos(self, x, y):
         """
-        Sets x, y position of Character. Returns tuple with (x, y) position
-        of Character object. Assumes position exists on map/screen.
+        Sets x, y position of tileacter. Returns tuple with (x, y) position
+        of tileacter object. Assumes position exists on map/screen.
 
         x, y = int
         """
@@ -54,17 +54,17 @@ class BaseGameObj(object):
         """
         self.pos = (self.pos[0] + changeInX, self.pos[1] + changeInY)
 
-    def getChar(self):
+    def getTile(self):
         """
         Returns four variables to be passed to a font object.
         """
         if self.space is None:
-            char = self.char
-            newChar = (char, 1, self.color, _E.black)
-            # print str(newChar)
-            return newChar
+            tile = self.tile
+            newTile = (tile, 1, self.color, _E.black)
+            # print str(newTile)
+            return newTile
         else:
-            return self.space.getChar()
+            return self.space.getTile()
 
     def testSpace(self):
         """
@@ -91,34 +91,174 @@ class BaseGameObj(object):
         """
         self.space = None
 
+    def getSpace(self):
+        """
+        Returns object in self.space. Assumes self.space has an object.
+        """
+        return self.space
+
 
 class Player(BaseGameObj):
 
     def __init__(self, x, y):
         super(Player, self).__init__(x, y)
-        self.char = '@'
+        self.tile = '@'
         self.color = _E.blue
+        self.types = ["pc"]  # dont call these types
+        self.hitPoints = 10
+        self.alive = True
+        self.baseDef = 0
+        self.baseDodge = 0
+        self.baseArmor = 0
+        self.baseAtt = 0
+        self.baseReact = 0
+        self.baseDmg = 5
+        self.baseDmgTypes = ["physical", "melee", "unarmed", "bludgeon",
+                             "bone", "fist", "punch"]
 
-    def getChar(self):
+    def getTypes(self):
+        """
+        Returns types list.
+        """
+        return self.types
+
+    def isAlive(self):
+        return self.alive
+
+    def isAggressive(self, subjTypes):  # Maybe charm effects can go here.
+        """
+        Recieves the subjects types and returns True if Hostile to the
+        subject, false otherwise.
+        """
+        for aType in subjTypes:
+            if aType not in self.types:
+                return True
+        return False
+
+    def getTile(self):
         """
         returns tuple representing pygames font render args
         """
-        return (self.char, 1, self.color, _E.black)
+        return (self.tile, 1, self.color, _E.black)
+
+    def getDef(self):
+        """
+        returns a number to be added to an attack roll. represents a
+        characters parrying, feinting, shield use, magical auras and
+        fields, etc.
+        """
+        return self.baseDef
+
+    def getReact(self):
+        """
+        Returns base react score of character.
+        """
+        return self.baseReact
+
+    def getDamage(self, baseDef):
+        """
+        Takes a baseDef score and returns damage.
+
+        baseDef - int - A number to be added to the attack result
+
+        Returns:
+        dmg - int - Total possible damage of the attack
+        type - list of strings - damage types that may modify the damage
+        """
+        # Currently attack roll is: 0 - 99
+        #                           + Base Defense of subject
+        #                           - Base Attack of subject
+        attRoll = int(random.random() * 100) + baseDef - self.baseAtt
+        # print self, "attack roll:", attRoll
+        # Currently there is a base 1:20 chance of hitting a target
+        if attRoll < 20:
+            if attRoll == 0:
+                # crit! double damage and crit type added
+                dmg = self.baseDmg * 2
+                types = self.baseDmgTypes[:]
+                types.append("critical")
+            else:
+                dmg = self.baseDmg
+                types = self.baseDmgTypes
+            return dmg, types
+        else:
+            raise Exception("Missed!")
+
+    def kill(self):
+        """
+        Kills character. For player this ends game.
+        """
+        self.alive = False
+        raise Exception("Game Over.")
+
+    def dodge(self, dmg, reactAdj=0):
+        """
+        Determines if character successfully dodges a source of damage
+
+        dmg - Damage.Damage Object - The damage source
+        reactionAdj - int - Number representing attackers ability to correct
+                            its attack if it can react quickly.
+
+        Returns:
+        mod - int - amount of damage reduction due to dodging.
+        """
+        mod = 0
+        # Currently dodge roll is: 0 - 99
+        #                          + Base reaction score of attacker
+        dodgeRoll = int(random.random() * 100) + reactAdj - self.baseDodge
+        if dodgeRoll < 5:
+            if dodgeRoll == 0:
+                mod = dmg.getDMG()
+            else:
+                reduceBy = dodgeRoll * 0.20
+                mod = dmg.getDMG() - int(dmg.getDMG() * reduceBy)
+        return mod
+
+    def armor(self, dmg):
+        """
+        Determines if character's armor protects it from a source of damage
+        and to what degree it reduces the damage if any.
+
+        dmg - Damage.Damage Object - the damage source
+
+        returns:
+        mod - int - amount of damage reduction due to armor.
+        """
+        # currently armor reduces damage 5% per point of armor
+        mod = 0
+        if self.baseArmor > 0:
+            reduceBy = self.baseArmor * .5
+            mod = dmg.getDMG() - int(dmg.getDMG() * reduceBy)
+        return mod
+
+    def applyDmg(self, dmg):
+        """
+        subtracts/adds dmg. Ultimately this will also look at damage types
+        and adjust totals accordingly.
+
+        dmg - Damage.Damage Object - the damage source
+        """
+        self.hitPoints -= dmg.getDMG()
+        print self, "left:", self.hitPoints
+        print "alive:", self.alive
+        if self.hitPoints < 1:
+            self.kill()
+            print "dead! self.alive:", self.alive
+
+    def __str__(self):
+        return "You"
 
 class Zombie(Player):
 
     def __init__(self, x, y):
-        super(Player, self).__init__(x, y)
-        self.char = 'Z'
+        super(Zombie, self).__init__(x, y)
+        self.tile = 'Z'
         self.color = _E.red
         self.alive = True
         self.sightRange = 10
-
-    def getAlive(self):
-        """
-        Returns life status.
-        """
-        return self.alive
+        self.types = ["monster", "hostile", "undead", "hungry", "evil"]
+        self.hitPoints = 5
+        self.baseDmg = 1
 
     def kill(self):
         """
@@ -138,8 +278,8 @@ class Zombie(Player):
     def move(self, playerPos):
         x1, y1 = self.pos[0], self.pos[1]
         x2, y2 = playerPos[0], playerPos[1]
+        x, y = 0, 0
         if self.detectPlayer(x1, y1, x2, y2):
-            x, y = 0, 0
             if x1 > x2:    # player x smaller
                 x += -1
             elif x1 < x2:  # player x bigger
@@ -153,10 +293,13 @@ class Zombie(Player):
             return random.choice([(-1, 0), (1, 0), (-1, 1), (-1, -1),
                                    (1, -1), (1, 1), (0, -1), (0, 1)])
         else:
-            return (0, 0)
+            return (x, y)
 
     def kickDoor(self):
         pass  # to do
+
+    def __str__(self):
+        return "Zombie"
 
 
 def main():
