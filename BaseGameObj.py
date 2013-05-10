@@ -60,7 +60,7 @@ class BaseGameObj(object):
         """
         if self.space is None:
             tile = self.tile
-            newTile = (tile, 1, self.color, _E.black)
+            newTile = (tile, 1, self.color, _E.black, self.pos)
             # print str(newTile)
             return newTile
         else:
@@ -107,6 +107,8 @@ class Player(BaseGameObj):
         self.types = ["pc"]  # dont call these types
         self.hitPoints = 10
         self.alive = True
+        self.sightRange = 11
+        self.facing = (0, 1)  # represents the tile directly in front.
         self.baseDef = 0
         self.baseDodge = 0
         self.baseArmor = 0
@@ -125,6 +127,9 @@ class Player(BaseGameObj):
     def isAlive(self):
         return self.alive
 
+    def getSight(self):
+        return self.sightRange
+
     def isAggressive(self, subjTypes):  # Maybe charm effects can go here.
         """
         Recieves the subjects types and returns True if Hostile to the
@@ -139,7 +144,7 @@ class Player(BaseGameObj):
         """
         returns tuple representing pygames font render args
         """
-        return (self.tile, 1, self.color, _E.black)
+        return (self.tile, 1, self.color, _E.black, self.pos)
 
     def getDef(self):
         """

@@ -15,6 +15,15 @@
 # along with the software; If not, see <http://www.gnu.org/licenses/>.
 #--------------------------------------------------------------------------
 
+# Mulipliers to convert coords into octants of the circle around an object.
+mult = [
+        [1, 0, 0, -1, -1, 0, 0, 1],
+        [0, 1, -1, 0, 0, -1, 1, 0],
+        [0, 1, 1, 0, 0, -1, -1, 0],
+        [1, 0, 0, 1, -1, 0, 0, -1]
+       ]
+
+
 # Define some colors
 black = (0, 0, 0)
 white = (255, 255, 255)

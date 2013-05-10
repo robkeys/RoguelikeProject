@@ -135,8 +135,6 @@ class Game(object):
                     except GameExceptions.NotValidMapLocation:
                         monster.setPos(oldPos[0], oldPos[1])
                     else:
-                        #  print "old", str(count), "=", str(oldPos)
-                        #  print "move", str(count), "=", str(newPos)
                         break
 
     def o_UpdateObj(self, gameObject, newX=0, newY=0, kill=False):
@@ -168,7 +166,6 @@ class Game(object):
                     oldMapPos.emptySpace()
                     # and inform the gameObj of it's new home
                     gameObject.updatePos(newX, newY)
-                    # print "o_UpdateObj: ", str(gameObject.getPos())
                 elif not newMapPos.testSpace():
                     self.o_Interact(gameObject, newMapPos.getSpace())
 
@@ -208,7 +205,7 @@ class Game(object):
         Returns - x, y - coords of top right corner of map area.
         """
         winX = self.wSize[0] / self.met[1]        # using win size
-        winY = self.wSize[1] / (self.met[4] + 8)       # get viewable area
+        winY = self.wSize[1] / (self.met[4] + 8)  # get viewable area
         # map max coord
         ext = self.lvlMap.getMaxX(), self.lvlMap.getMaxY()
         if ext[0] < winX:   # |
@@ -219,11 +216,6 @@ class Game(object):
 
         half = (win[0] / 2, win[1] / 2)  # half max window coords
         ply = self.player.getPos()       # player coords
-
-        #print "win: " + str(win)      # |
-        #print "half: " + str(half)    # |
-        #print "ext: " + str(ext)      # Debug stuff. Get rid of it.
-        #print "ply: " + str(ply)      # |
 
         start, end = [0, 0], [0, 0]
         for i in range(2):
@@ -240,8 +232,75 @@ class Game(object):
                 start[i] = 0                         # map is smaller
                 end[i] = ext[i]                      # than viewable area
 
-        #print "result: " + str(start), str(end)
         return (start[0], start[1]), (end[0], end[1])  # minInd, maxInd
+
+    def isBlocked(self, tile, x, y, bounds):
+        """
+        Returns True if tile is blocked from light source
+        """
+        return (tile is None or x < bounds[0] or y < bounds[1] or
+                x >= bounds[2] or y >= bounds[3])
+
+    def m_FindLitArea(self, minInd, maxInd):
+        """
+        Generates a list of tile coords to be lit/visible to player.
+        Borrowed heavily from Python shadowcasting implementation on
+        roguebasin.roguelikedevelopment.org direct: http://goo.gl/Bg5Qq
+        """
+        self.lit = []
+        self.lit.append(self.player.getPos())
+        ox, oy = self.lit[0][0], self.lit[0][1]
+        radius = self.player.getSight()
+        bounds = (minInd[0], minInd[1], maxInd[0], maxInd[1])
+        for n in range(8):
+            mult = (_E.mult[0][n], _E.mult[1][n], _E.mult[2][n], _E.mult[3][n])
+            self.m_LightSect(ox, oy, 1, 1.0, 0.0, radius, bounds, mult)
+
+    def m_LightSect(self, ox, oy, row, start, end, radius, bounds, mult):
+        """
+        steps through tiles determining if they are lit or not.
+        """
+        if start < end:
+            return
+        radiusSquared = radius * radius
+        for i in range(row, radius + 1):
+            relX, relY = -i - 1, -i  # Relative position of x, y coords
+            blocked = False
+            while relX <= 0:
+                relX += 1
+                actualX = ox + (relX * mult[0]) + (relY * mult[1])
+                actualY = oy + (relX * mult[2]) + (relY * mult[3])
+                lSlope = (relX - 0.5) / (relY + 0.5)
+                rSlope = (relX + 0.5) / (relY - 0.5)
+                if start < rSlope:
+                    continue
+                elif end > lSlope:
+                    break
+                else:
+                    try:
+                        tile = self.lvlMap.getMapObject((actualX, actualY))
+                    except GameExceptions.NotValidMapLocation:
+                        tile = None
+                    if relX * relX + relY * relY < radiusSquared and \
+                                 bounds[0] <= actualX < bounds[2] and \
+                                 bounds[1] <= actualY < bounds[3]:
+                        self.lit.append((actualX, actualY))
+                    if blocked:
+                        if self.isBlocked(tile, actualX, actualY, bounds):
+                            new_start = rSlope
+                            continue
+                        else:
+                            blocked = False
+                            start = new_start
+                    else:
+                        if self.isBlocked(tile, actualX, actualY, bounds):
+                            if i < radius:
+                                blocked = True
+                                self.m_LightSect(ox, oy, i + 1, start, lSlope,
+                                                 radius, bounds, mult)
+                                new_start = rSlope
+            if blocked:
+                break
 
     def newFrame(self):
         """
@@ -252,12 +311,15 @@ class Game(object):
 
         # Blit GameObjects
         minInd, maxInd = self.m_FindDrawnArea()
+        self.m_FindLitArea(minInd, maxInd)
+        # Here we could call the lighting function to generate a new
+        # list of lit squares
         drawX, drawY = 0, 0
         for tile in self.lvlMap.drawMap(minInd, maxInd):
             if tile[0] == 0:
                 drawX = 0
                 drawY += self.met[4] + 8
-            else:
+            elif tile[4] in self.lit:
                 if tile[0] in ['#', '@']:
                     self.setFont("courbd.ttf", self.fontSize)
                 # print "tile: ", str(tile)
@@ -265,6 +327,10 @@ class Game(object):
                 mapText = self.font.render(tile[0], tile[1], tile[2], tile[3])
                 self.screen.blit(mapText, (drawX, drawY))
                 self.setFont(self.fontName, self.fontSize)
+                drawX += self.met[1]
+            else:
+                mapText = self.font.render(" ", 1, _E.black, _E.black)
+                self.screen.blit(mapText, (drawX, drawY))
                 drawX += self.met[1]
 
         # Limit to 20 frames per second

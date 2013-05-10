@@ -1,6 +1,6 @@
 #--------------------------------------------------------------------------
-# Name:        GameExceptions
-# Purpose:     Exceptions called by game.
+# Name:        TileHandler
+# Purpose:     Creates and serves up map tiles.
 #
 # Author:      Rob Keys
 #
@@ -14,17 +14,12 @@
 # You should have received a copy of the GNU General Public License
 # along with the software; If not, see <http://www.gnu.org/licenses/>.
 #--------------------------------------------------------------------------
+import random
 
-class NotValidMapLocation(Exception):
-    """
-    Called when object cannot move into or generally interact with a
-    given map location.
-    """
-    pass
+class TileHandler(object):
 
-class NotInBounds(Exception):
-    """
-    Called when a request for an x, y coord is not within the bounds of
-    a map.
-    """
-    pass
+    def __init__(self):
+        self.tileList = []
+
+    def newTile(self):
+        pass

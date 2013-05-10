@@ -14,10 +14,10 @@
 # You should have received a copy of the GNU General Public License
 # along with the software; If not, see <http://www.gnu.org/licenses/>.
 #--------------------------------------------------------------------------
-import BaseGameObj
-import GameExceptions
+import BaseGameObj  # soon to be deprecated. replaced with a map tile handler.
 import random
-import _ENV_VAR as _E
+import GameExceptions as _ERR
+import _ENV_VAR as _VAR
 
 
 class ObjectMap(object):
@@ -64,7 +64,8 @@ class ObjectMap(object):
             while xCount < maxInd[0]:
                 space = self.mapArray[xCount][yCount]
                 if space is None:
-                    newMapList.append(('#', 1, _E.white, _E.black))
+                    pos = (xCount, yCount)
+                    newMapList.append(('#', 1, _VAR.white, _VAR.black, pos))
                 else:
                     newMapList.append(space.getTile())
                 xCount += 1
@@ -73,10 +74,24 @@ class ObjectMap(object):
         self.setMap(newMapList)
         return self.mapList
 
+    def assignMapTile(self, x, y, mapTileObj):
+        """
+        Replaces createBaseMap.
+        Takes given index and returns the appropriate copy of a
+        mapTile. Only one of any given kind of tile will exist.
+        """
+        maxX, maxY = self.getMaxX() - 1, self.getMaxY() - 1
+        if x in range(0, maxX + 1) and y in range(0, maxY + 1):
+            if random.random() > 0.02:
+                pass  # call map tile handler for an Obj
+        else:
+            raise _ERR.NotInBounds("Given coordinate is not in bounds")
+
     def createBaseMap(self, x, y):
         """
+        Soon to be deprecated.
         Takes given index and returns a BaseGameObj if that index is not
-        on the outermost edge of the map, or out of range entirely
+        on the outermost edge of the map, or out of range entirely.
 
         x, y - int, int - index to draw
         """
@@ -108,7 +123,7 @@ class ObjectMap(object):
 
     def drawMap(self, minInd, maxInd):
         """
-        generator that spits out one tileacter of the map at a time for to
+        generator that spits out one tile of the map at a time for to
         be blitted. Might be usefull to assign colors here as well?
         """
         newMapList = self.getMap(minInd, maxInd)
@@ -126,7 +141,7 @@ class ObjectMap(object):
             if pos[1] > 0 and pos[1] < self.getMaxY():
                 if self.getMapArray()[pos[0]][pos[1]] is not None:
                     return True
-        raise GameExceptions.NotValidMapLocation("Not a valid map space.")
+        raise _ERR.NotValidMapLocation("Not a valid map space.")
 
     def getMapObject(self, pos):
         """
@@ -136,7 +151,7 @@ class ObjectMap(object):
         """
         try:
             self.testMapPos(pos)
-        except GameExceptions.NotValidMapLocation as err:
+        except _ERR.NotValidMapLocation as err:
             raise err
         else:
             return self.getMapArray()[pos[0]][pos[1]]
