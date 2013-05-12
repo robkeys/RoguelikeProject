@@ -24,7 +24,7 @@ mult = [
        ]
 
 
-# Define some colors
+# Some colors
 black = (0, 0, 0)
 white = (255, 255, 255)
 grey01 = (150, 150, 150)
@@ -36,6 +36,10 @@ blue = (0, 0, 255)
 green = (0, 255, 0)
 red = (255, 0, 0)
 
+# Color sets
+cs_greys = [grey01, grey02, grey03, grey04, grey05]
+
+# Other stuff (NOT IMPLEMENTED)
 moods = ["Friendly", "Calm", "Neutral", "Aggressive", "Hostile"]
 goodMoods = ["Friendly", "Calm"]
 badMoods = ["Aggressive", "Hostile"]

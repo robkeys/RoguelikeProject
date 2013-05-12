@@ -23,7 +23,7 @@ import Game
 def main():
     done = False
     game = Game.Game()
-    game.o_UpdateObj(game.p_GetPlayer(), 0, 0)
+    game.o_UpdateObj(game.p_GetPlayer(), 1, 1)
     game.o_GenMonsters(10)
     # -------- Main Program Loop -----------
     while not done:

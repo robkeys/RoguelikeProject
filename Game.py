@@ -148,26 +148,26 @@ class Game(object):
         newX, newY - int, int - change in objects current map coords
         """
         oldPos = gameObject.getPos()                   # get old position
-        oldMapPos = self.lvlMap.getMapObject(oldPos)   # get map Obj
         newPos = (oldPos[0] + newX, oldPos[1] + newY)  # add new position
         if kill:
-            oldMapPos.emptySpace()
+            self.lvlMap.setObjArray(oldPos)
         else:
             try:
-                # check if valid position while assigning var
-                newMapPos = self.lvlMap.getMapObject(newPos)
+                # check if valid move
+                legal = self.lvlMap.testMapPos(newPos, testLegal=True)
             except GameExceptions.NotValidMapLocation as err:
                 raise err
             else:
-                if oldPos != newPos and newMapPos.testSpace():
+                if legal:
                     # Fill the new space
-                    newMapPos.fillSpace(gameObject)
+                    self.lvlMap.setObjArray(newPos, gameObject)
                     # empty the old space
-                    oldMapPos.emptySpace()
+                    self.lvlMap.setObjArray(oldPos)
                     # and inform the gameObj of it's new home
                     gameObject.updatePos(newX, newY)
-                elif not newMapPos.testSpace():
-                    self.o_Interact(gameObject, newMapPos.getSpace())
+                elif not legal:
+                    subject = self.lvlMap.getMapTile(newPos)
+                    self.o_Interact(gameObject, subject)
 
     def o_Interact(self, initObj, subject):
         """
@@ -278,7 +278,7 @@ class Game(object):
                     break
                 else:
                     try:
-                        tile = self.lvlMap.getMapObject((actualX, actualY))
+                        tile = self.lvlMap.getMapTile((actualX, actualY))
                     except GameExceptions.NotValidMapLocation:
                         tile = None
                     if relX * relX + relY * relY < radiusSquared and \
@@ -316,7 +316,7 @@ class Game(object):
         # list of lit squares
         drawX, drawY = 0, 0
         for tile in self.lvlMap.drawMap(minInd, maxInd):
-            if tile[0] == 0:
+            if tile[0] == 0:  # new row
                 drawX = 0
                 drawY += self.met[4] + 8
             elif tile[4] in self.lit:
@@ -328,7 +328,7 @@ class Game(object):
                 self.screen.blit(mapText, (drawX, drawY))
                 self.setFont(self.fontName, self.fontSize)
                 drawX += self.met[1]
-            else:
+            else:  # draw a blank space
                 mapText = self.font.render(" ", 1, _E.black, _E.black)
                 self.screen.blit(mapText, (drawX, drawY))
                 drawX += self.met[1]

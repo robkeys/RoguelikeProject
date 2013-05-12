@@ -25,7 +25,7 @@ class BaseGameObj(object):
 
     def __init__(self, x=-1, y=-1):
         self.setPos(x, y)     # The position of this object
-        self.tile = random.choice(['.', '.', '.', "'", ',', ';', ':'])
+        self.img = random.choice(['.', '.', '.', "'", ',', ';', ':'])
         self.color = random.choice([_E.grey01, _E.grey02, _E.grey03,
                                     _E.grey04, _E.grey05])
         self.space = None
@@ -56,15 +56,9 @@ class BaseGameObj(object):
 
     def getTile(self):
         """
-        Returns four variables to be passed to a font object.
+        Returns a img, color, and bg of the tile
         """
-        if self.space is None:
-            tile = self.tile
-            newTile = (tile, 1, self.color, _E.black, self.pos)
-            # print str(newTile)
-            return newTile
-        else:
-            return self.space.getTile()
+        return self.img, self.color, self.bg
 
     def testSpace(self):
         """
@@ -102,12 +96,13 @@ class Player(BaseGameObj):
 
     def __init__(self, x, y):
         super(Player, self).__init__(x, y)
-        self.tile = '@'
+        self.img = '@'
         self.color = _E.blue
+        self.bg = _E.black
         self.types = ["pc"]  # dont call these types
         self.hitPoints = 10
         self.alive = True
-        self.sightRange = 11
+        self.sightRange = 20
         self.facing = (0, 1)  # represents the tile directly in front.
         self.baseDef = 0
         self.baseDodge = 0
@@ -139,12 +134,6 @@ class Player(BaseGameObj):
             if aType not in self.types:
                 return True
         return False
-
-    def getTile(self):
-        """
-        returns tuple representing pygames font render args
-        """
-        return (self.tile, 1, self.color, _E.black, self.pos)
 
     def getDef(self):
         """
@@ -257,7 +246,7 @@ class Zombie(Player):
 
     def __init__(self, x, y):
         super(Zombie, self).__init__(x, y)
-        self.tile = 'Z'
+        self.img = 'Z'
         self.color = _E.red
         self.alive = True
         self.sightRange = 10

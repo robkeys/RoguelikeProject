@@ -14,10 +14,9 @@
 # You should have received a copy of the GNU General Public License
 # along with the software; If not, see <http://www.gnu.org/licenses/>.
 #--------------------------------------------------------------------------
-import BaseGameObj  # soon to be deprecated. replaced with a map tile handler.
-import random
+import TileHandler
 import GameExceptions as _ERR
-import _ENV_VAR as _VAR
+import _ENV_VAR as _E
 
 
 class ObjectMap(object):
@@ -25,7 +24,10 @@ class ObjectMap(object):
     def __init__(self, x, y):
         self.x, self.y = x, y
         self.mapList = ""
-        self.mapArray = self.makeMap(x, y)
+        self.tiles = TileHandler.TileHandler()
+        self.objects = []
+        self.tileArray, self.objArray = self.makeMap(x, y)
+        self.toggle = 0
 
     def setMap(self, mapList):
         """
@@ -45,15 +47,16 @@ class ObjectMap(object):
         """
         return self.y
 
-    def getMapArray(self):
+    def getTileArray(self):
         """
         Returns 2d array containing map elements
         """
-        return self.mapArray
+        return self.tileArray
 
     def getMap(self, minInd, maxInd):
         """
-        Uses map array to return map as a str
+        Uses map array to return map as a list of values required by pygame
+        to blit the tile.
 
         minInd, maxInd - tuple, tuple - the two corners of the map to draw
         """
@@ -62,64 +65,79 @@ class ObjectMap(object):
         while yCount < maxInd[1]:
             xCount = minInd[0]
             while xCount < maxInd[0]:
-                space = self.mapArray[xCount][yCount]
-                if space is None:
-                    pos = (xCount, yCount)
-                    newMapList.append(('#', 1, _VAR.white, _VAR.black, pos))
+                if self.objArray[xCount][yCount] is None:
+                    tile = self.tileArray[xCount][yCount]
                 else:
-                    newMapList.append(space.getTile())
+                    tile = self.objArray[xCount][yCount]
+                img, color, bg = tile.getTile()
+                pos = (xCount, yCount)
+                newMapList.append((img, 1, color, bg, pos))
                 xCount += 1
             newMapList.append((0, 0, 0, 0))
             yCount += 1
         self.setMap(newMapList)
         return self.mapList
 
-    def assignMapTile(self, x, y, mapTileObj):
+    def setObjArray(self, pos, Obj=None):
+        """
+        puts object in objArray.
+        """
+        self.objArray[pos[0]][pos[1]] = Obj
+
+    def assignMapTile(self, x, y):
         """
         Replaces createBaseMap.
         Takes given index and returns the appropriate copy of a
         mapTile. Only one of any given kind of tile will exist.
         """
         maxX, maxY = self.getMaxX() - 1, self.getMaxY() - 1
-        if x in range(0, maxX + 1) and y in range(0, maxY + 1):
-            if random.random() > 0.02:
-                pass  # call map tile handler for an Obj
+        if x == 0 or x == maxX or y == 0 or y == maxY:
+            return self.tiles.getTile(ID="00")  # ID="00" is a basic wall
+        elif x in range(1, 4) or y in range(1, 4):
+            #make sure player start is clear. This will have to change later
+            return self.tiles.getTile(ID="!00")  # not the listed tileID
+        elif x in range(4, maxX) and y in range(4, maxY):
+            return self.tiles.getTile()
         else:
+            print x, y
             raise _ERR.NotInBounds("Given coordinate is not in bounds")
 
-    def createBaseMap(self, x, y):
-        """
-        Soon to be deprecated.
-        Takes given index and returns a BaseGameObj if that index is not
-        on the outermost edge of the map, or out of range entirely.
+    ##def createBaseMap(self, x, y):
+        ##"""
+        ##Soon to be deprecated.
+        ##Takes given index and returns a BaseGameObj if that index is not
+        ##on the outermost edge of the map, or out of range entirely.
 
-        x, y - int, int - index to draw
-        """
-        maxX, maxY = self.getMaxX() - 1, self.getMaxY() - 1
-        if x in range(1, maxX) and y in range(1, maxY):
-            if random.random() > 0.01:
-                return BaseGameObj.BaseGameObj(x, y)
-            else:
-                return None
-        elif x == maxX or x == 0 or y == maxY or y == 0:
-            return None
-        else:
-            raise Exception('NotMapLocation')
+        ##x, y - int, int - index to draw
+        ##"""
+        ##maxX, maxY = self.getMaxX() - 1, self.getMaxY() - 1
+        ##if x in range(1, maxX) and y in range(1, maxY):
+            ##if random.random() > 0.01:
+                ##return BaseGameObj.BaseGameObj(x, y)
+            ##else:
+                ##return None
+        ##elif x == maxX or x == 0 or y == maxY or y == 0:
+            ##return None
+        ##else:
+            ##raise Exception('NotMapLocation')
 
     def makeMap(self, x, y):
         """
-        Generates a simple map. Map is a 2d array of BaseGameObj to
-        represent empty space. Empty array elements represent spaces
-        that cannot be occupied by GameObj until explicity set.
+        Returns two (maybe three) versions of the map. The tileArray is
+        all of the floor, wall, door, etc. tiles in a map. the objMap is
+        all of the players, monsters, npcs, fountains, etc. in a map.
 
         x, y - int, int - dimensions of array
         """
-        mapArray = []
+        tileArray = []
+        objArray = []
         for row in range(x):
-            mapArray.append([])
+            tileArray.append([])
+            objArray.append([])
             for col in range(y):
-                mapArray[row].append(self.createBaseMap(row, col))
-        return mapArray
+                tileArray[row].append(self.assignMapTile(row, col))
+                objArray[row].append(None)
+        return tileArray, objArray
 
     def drawMap(self, minInd, maxInd):
         """
@@ -131,21 +149,24 @@ class ObjectMap(object):
             tile = newMapList.pop(0)
             yield tile
 
-    def testMapPos(self, pos):
+    def testMapPos(self, pos, testLegal=False):
         """
-        Tests map pos to see if it exists
+        Tests map pos to see if it exists and is legal to move into.
 
         pos = tuple containing two ints
         """
         if pos[0] > 0 and pos[0] < self.getMaxX():
             if pos[1] > 0 and pos[1] < self.getMaxY():
-                if self.getMapArray()[pos[0]][pos[1]] is not None:
-                    return True
+                if self.tileArray[pos[0]][pos[1]].getID()[0] != "0":
+                    if testLegal and self.objArray[pos[0]][pos[1]] == None:
+                        return testLegal
+                    else:
+                        return False
         raise _ERR.NotValidMapLocation("Not a valid map space.")
 
-    def getMapObject(self, pos):
+    def getMapTile(self, pos):
         """
-        Takes tuple representing location in mapArray and returns object
+        Takes tuple representing location in tileArray and returns object
 
         pos = tuple containing two integers
         """
@@ -154,7 +175,10 @@ class ObjectMap(object):
         except _ERR.NotValidMapLocation as err:
             raise err
         else:
-            return self.getMapArray()[pos[0]][pos[1]]
+            if self.objArray[pos[0]][pos[1]] is None:
+                return self.tileArray[pos[0]][pos[1]]
+            else:
+                return self.objArray[pos[0]][pos[1]]
 
 
 def main():
