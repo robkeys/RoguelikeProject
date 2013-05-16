@@ -1,12 +1,12 @@
 #--------------------------------------------------------------------------
-# Name:        Map
-# Purpose:  Does map stuff
+# Name:         Map
+# Purpose:      Base class for game map objects.
 #
-# Author:      Rob Keys
+# Author:       Rob Keys
 #
-# Created:     05/04/2013
-# Copyright:   (c) 2013, Rob Keys
-# Licence:     This software is distributed in the hope that it will
+# Created:      05/13/2013
+# Copyright:    (c) 2013, Rob Keys
+# Licence:      This software is distributed in the hope that it will
 # be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
 # of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
@@ -14,176 +14,81 @@
 # You should have received a copy of the GNU General Public License
 # along with the software; If not, see <http://www.gnu.org/licenses/>.
 #--------------------------------------------------------------------------
-import TileHandler
-import GameExceptions as _ERR
-import _ENV_VAR as _E
 
 
-class ObjectMap(object):
+class Map(object):
 
-    def __init__(self, x, y):
-        self.x, self.y = x, y
-        self.mapList = ""
-        self.tiles = TileHandler.TileHandler()
-        self.objects = []
-        self.tileArray, self.objArray = self.makeMap(x, y)
-        self.toggle = 0
+    def __init__(self, maxX, maxY):
+        self.maxX, self.maxY = maxX, maxY
+        self.array = []
+        self.makeMap()
 
-    def setMap(self, mapList):
+    def makeMap(self):
         """
-        Takes str as argument and sets to self.mapList
+        Creates a 2d array based on the self.maxX and self.maxY dimensions.
+        It fills the array with None objects.
         """
-        self.mapList = mapList
+        Y = 0
+        for Y in range(self.maxY):
+            self.array.append([])
+            for X in range(self.maxX):
+                self.array[Y].append(None)
 
-    def getMaxX(self):
+    def getMax(self):
         """
-        Returns int representing the extent of the Map's x coords
+        Returns self.maxX and self.maxY
         """
-        return self.x
+        return self.maxX, self.maxY
 
-    def getMaxY(self):
+    def getArray(self):
         """
-        Returns int representing the extent of the Map's y coords
+        Returns self.array
         """
-        return self.y
+        return self.array
 
-    def getTileArray(self):
+    def setPos(self, x, y, data):
         """
-        Returns 2d array containing map elements
-        """
-        return self.tileArray
+        Places the declared data into self.array at the specified coords.
 
-    def getMap(self, minInd, maxInd):
+        x, y - int - The x, y coords of a point in the array.
+        data - any - The data to be placed in the array.
         """
-        Uses map array to return map as a list of values required by pygame
-        to blit the tile.
+        self.array[y][x] = data
 
-        minInd, maxInd - tuple, tuple - the two corners of the map to draw
+    def getPos(self, x, y):
         """
-        newMapList = []
-        yCount = minInd[1]
-        while yCount < maxInd[1]:
-            xCount = minInd[0]
-            while xCount < maxInd[0]:
-                if self.objArray[xCount][yCount] is None:
-                    tile = self.tileArray[xCount][yCount]
-                else:
-                    tile = self.objArray[xCount][yCount]
-                img, color, bg = tile.getTile()
-                pos = (xCount, yCount)
-                newMapList.append((img, 1, color, bg, pos))
-                xCount += 1
-            newMapList.append((0, 0, 0, 0))
-            yCount += 1
-        self.setMap(newMapList)
-        return self.mapList
+        Returns data stored in self.array at given coords.
 
-    def setObjArray(self, pos, Obj=None):
+        x, y - int - The x, y coords of a point in the array.
         """
-        puts object in objArray.
-        """
-        self.objArray[pos[0]][pos[1]] = Obj
+        return self.array[y][x]
 
-    def assignMapTile(self, x, y):
+    def testMapPos(self, x, y):
         """
-        Replaces createBaseMap.
-        Takes given index and returns the appropriate copy of a
-        mapTile. Only one of any given kind of tile will exist.
-        """
-        maxX, maxY = self.getMaxX() - 1, self.getMaxY() - 1
-        if x == 0 or x == maxX or y == 0 or y == maxY:
-            return self.tiles.getTile(ID="00")  # ID="00" is a basic wall
-        elif x in range(1, 4) or y in range(1, 4):
-            #make sure player start is clear. This will have to change later
-            return self.tiles.getTile(ID="!00")  # not the listed tileID
-        elif x in range(4, maxX) and y in range(4, maxY):
-            return self.tiles.getTile()
-        else:
-            print x, y
-            raise _ERR.NotInBounds("Given coordinate is not in bounds")
+        Returns True if the given coords are in self.array
 
-    ##def createBaseMap(self, x, y):
-        ##"""
-        ##Soon to be deprecated.
-        ##Takes given index and returns a BaseGameObj if that index is not
-        ##on the outermost edge of the map, or out of range entirely.
-
-        ##x, y - int, int - index to draw
-        ##"""
-        ##maxX, maxY = self.getMaxX() - 1, self.getMaxY() - 1
-        ##if x in range(1, maxX) and y in range(1, maxY):
-            ##if random.random() > 0.01:
-                ##return BaseGameObj.BaseGameObj(x, y)
-            ##else:
-                ##return None
-        ##elif x == maxX or x == 0 or y == maxY or y == 0:
-            ##return None
-        ##else:
-            ##raise Exception('NotMapLocation')
-
-    def makeMap(self, x, y):
-        """
-        Returns two (maybe three) versions of the map. The tileArray is
-        all of the floor, wall, door, etc. tiles in a map. the objMap is
-        all of the players, monsters, npcs, fountains, etc. in a map.
-
-        x, y - int, int - dimensions of array
-        """
-        tileArray = []
-        objArray = []
-        for row in range(x):
-            tileArray.append([])
-            objArray.append([])
-            for col in range(y):
-                tileArray[row].append(self.assignMapTile(row, col))
-                objArray[row].append(None)
-        return tileArray, objArray
-
-    def drawMap(self, minInd, maxInd):
-        """
-        generator that spits out one tile of the map at a time for to
-        be blitted. Might be usefull to assign colors here as well?
-        """
-        newMapList = self.getMap(minInd, maxInd)
-        while newMapList != []:
-            tile = newMapList.pop(0)
-            yield tile
-
-    def testMapPos(self, pos, testLegal=False):
-        """
-        Tests map pos to see if it exists and is legal to move into.
-
-        pos = tuple containing two ints
-        """
-        if pos[0] > 0 and pos[0] < self.getMaxX():
-            if pos[1] > 0 and pos[1] < self.getMaxY():
-                if self.tileArray[pos[0]][pos[1]].getID()[0] != "0":
-                    if testLegal and self.objArray[pos[0]][pos[1]] == None:
-                        return testLegal
-                    else:
-                        return False
-        raise _ERR.NotValidMapLocation("Not a valid map space.")
-
-    def getMapTile(self, pos):
-        """
-        Takes tuple representing location in tileArray and returns object
-
-        pos = tuple containing two integers
+        x, y - int - The x, y coords of the point to test in the array.
         """
         try:
-            self.testMapPos(pos)
-        except _ERR.NotValidMapLocation as err:
-            raise err
+            testVar = self.array[y][x]
+        except IndexError:
+            return False
         else:
-            if self.objArray[pos[0]][pos[1]] is None:
-                return self.tileArray[pos[0]][pos[1]]
-            else:
-                return self.objArray[pos[0]][pos[1]]
+            del(testVar)
+            return True
 
+    def iterMap(self, x1, y1, x2, y2):
+        """
+        Generator that yields data from self.array in order from x1, y1 to
+        x2, y2.
 
-def main():
-    m = ObjectMap(3, 3)
-    print m.getMap()
-
-if __name__ == '__main__':
-    main()
+        x1, y1 - int - starting coords of data to be fetched.
+        x2, y2 - int - ending coords of data to be fetched.
+        """
+        Y = y1
+        while Y >= y2:
+            X = x1
+            while X >= x2:
+                yield self.array[Y][X]
+                X += 1
+            Y += 1

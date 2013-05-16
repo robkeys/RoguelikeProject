@@ -19,13 +19,16 @@ import BaseGameObj
 import _ENV_VAR as _E
 
 
-class Tile(object):
+class Tile(BaseGameObj.BaseGameObj):
 
-    def __init__(self, ID='', img='', color=()):
+    def __init__(self, ID, img, color, passable):
+        super(Tile, self).__init__()
         self.ID = ID
         self.img = img
         self.color = color
         self.bg = _E.black
+        self.passable = passable
+        self.tag = "tile"
 
     def setID(self, ID):
         """
@@ -34,31 +37,26 @@ class Tile(object):
         """
         self.ID = ID
 
-    def setImg(self, img):
+    def setPassable(self, passable):
         """
-        Sets self.img which is the character that the map displays when this
-        tile is referenced.
-        """
-        self.img = img
+        Sets tile's passability. Passable tiles can be occupied by
+        entitites and may contain items.
 
-    def setColor(self, color):
+        passable - bool - True if passable.
         """
-        Sets self.color to the (r, g, b) value of the color to display when
-        this tile is drawn.
-        """
-        self.color = color
+        self.passable = passable
 
     def getID(self):
         """
-        Returns self.ID.
+        Returns self.ID which is a str.
         """
         return self.ID
 
-    def getTile(self):
+    def getPassable(self):
         """
-        Returns a img, color, and bg of the tile.
+        Returns self.passable which is a bool.
         """
-        return self.img, self.color, self.bg
+        return self.passable
 
 
 class TileHandler(object):
@@ -67,49 +65,38 @@ class TileHandler(object):
         self.tileDict = {}
         self.tileImgs = ["#", ".", ",", ";", "'"]
         self.tileInfo = {self.tileImgs[0]: [_E.white],
-                           self.tileImgs[1]: _E.cs_greys,
-                           self.tileImgs[2]: _E.cs_greys,
-                           self.tileImgs[3]: _E.cs_greys,
-                           self.tileImgs[4]: _E.cs_greys}
+                         self.tileImgs[1]: _E.cs_greys,
+                         self.tileImgs[2]: _E.cs_greys,
+                         self.tileImgs[3]: _E.cs_greys,
+                         self.tileImgs[4]: _E.cs_greys}
 
-    def genTile(self, openSpace=False):
+    def makeTile(self, x1, y1, x2, y2):
         """
         Randomly generates tile instantiation information and returns it.
+        Will not create passable tiles on map edge.
         """
-        if random.random() > .1 or openSpace:
-            imgInd = random.choice(xrange(1, len(self.tileImgs)))
-        else:
+        rand = random.random()
+        if rand < .1 or x1 == 0 or x1 == x2 or y1 == 0 or y1 == y2:
             imgInd = 0
+            passable = False
+        else:
+            imgInd = random.choice(xrange(1, len(self.tileImgs)))
+            passable = True
         img = self.tileImgs[imgInd]
         colorInd = random.choice(xrange(len(self.tileInfo[img])))
         color = self.tileInfo[img][colorInd]
         ID = str(imgInd) + str(colorInd)
-        return ID, img, color
+        self.tileDict[ID] = self.tileDict.get(ID,
+                                         Tile(ID, img, color, passable))
+        return self.tileDict[ID]
 
-    def getTile(self, ID=""):
+    def getTile(self, ID):
         """
-        Creates or finds a previously created tile and returns it. The tileID
-        relating to the tileDict can be declared, and is used to
-        create wall tiles on the border of a map.
+        Finds a previously created tile and returns it.
 
         tileID - str - the key of the tileDict that relates to the value of
                        the requested tile.
         """
-        if not ID:
-            # we must be making a new tile. Generate it.
-            ID, img, color = self.genTile()
-        elif ID[0] == "!":
-            # we are making a new tile and cannot be a wall.
-            ID, img, color = self.genTile(openSpace=True)
-        else:
-            img = self.tileImgs[int(ID[0])]
-            color = self.tileInfo[img][int(ID[1])]
-        # Currently tilesIDs are 2 digits. This limits us to 10 images & 10
-        # colors of those images. This will need to be revisited.
-        #
-        # For safety's sake we reassign the value for the key in the
-        # tileDict with its value again to take advantage of the get funct.
-        self.tileDict[ID] = self.tileDict.get(ID, Tile(ID, img, color))
         return self.tileDict[ID]
 
     def setTileColor(self, ID, color):

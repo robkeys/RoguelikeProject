@@ -14,11 +14,12 @@
 # You should have received a copy of the GNU General Public License
 # along with the software; If not, see <http://www.gnu.org/licenses/>.
 #--------------------------------------------------------------------------
+import math
 import pygame
 import random
 import BaseGameObj
 import Monsters
-import Map
+import LvlMap
 import GameExceptions
 import Damage as _DMG
 import _ENV_VAR as _E
@@ -41,9 +42,12 @@ class Game(object):
         self.fontDict = {}
 
         # intial game objects.
-        self.lvlMap = Map.ObjectMap(70, 50)
-        self.player = BaseGameObj.Player(1, 1)
+        self.lvlMap = LvlMap.LvlMap(70, 50)
+        self.player = BaseGameObj.Player(0, 0)
         self.monsters = Monsters.Monsters()
+
+        # map variables
+        self.lit = []
 
         # Initial declarations
         self.setFont(self.fontName, self.fontSize)
@@ -96,12 +100,24 @@ class Game(object):
         except GameExceptions.NotValidMapLocation as err:
             print err.args
 
+    def p_PlayerStartPos(self):
+        """
+        Finds valid map location to place the player object.
+        """
+        while True:
+            x, y = self.player.getPos()
+            try:
+                self.lvlMap.addEntity(x, y, self.player)
+            except (GameExceptions.NotValidMapLocation, IndexError):
+                self.player.updatePos(1, 1)
+            else:
+                break
+
     def o_GenMonsters(self, numMonsters):
         """
         Finds a valid map location and inserts a monster.
         """
-        lenX = self.lvlMap.getMaxX()
-        lenY = self.lvlMap.getMaxY()
+        lenX, lenY = self.lvlMap.getMax()
         for monster in xrange(numMonsters):
             self.monsters.addMonster((0, 0))
             newMonster = self.monsters.getMonster()
@@ -111,6 +127,8 @@ class Game(object):
                 newMonster.setPos(x, y)
                 try:
                     self.o_UpdateObj(newMonster, x, y)
+                except IndexError:
+                    pass
                 except GameExceptions.NotValidMapLocation:
                     pass
                 else:
@@ -129,10 +147,11 @@ class Game(object):
                 count += 1
                 for i in xrange(5):
                     oldPos = monster.getPos()
-                    newPos = monster.move(self.player.getPos())
+                    playerX, playerY = self.player.getPos()
+                    newPos = monster.move(playerX, playerY)
                     try:
                         self.o_UpdateObj(monster, newPos[0], newPos[1])
-                    except GameExceptions.NotValidMapLocation:
+                    except (GameExceptions.NotValidMapLocation, IndexError):
                         monster.setPos(oldPos[0], oldPos[1])
                     else:
                         break
@@ -147,27 +166,21 @@ class Game(object):
         gameObject - any superclass of BaseGameObject (players & monsters)
         newX, newY - int, int - change in objects current map coords
         """
-        oldPos = gameObject.getPos()                   # get old position
-        newPos = (oldPos[0] + newX, oldPos[1] + newY)  # add new position
+        oldX, oldY = gameObject.getPos()                   # get old position
+        X, Y = (oldX + newX, oldY + newY)  # add new position
         if kill:
-            self.lvlMap.setObjArray(oldPos)
+            self.lvlMap.rmTarget(gameObject)
         else:
             try:
-                # check if valid move
-                legal = self.lvlMap.testMapPos(newPos, testLegal=True)
+                self.lvlMap.mvTarget(X, Y, gameObject)
             except GameExceptions.NotValidMapLocation as err:
                 raise err
+            except GameExceptions.LocationOccupied:
+                subject = self.lvlMap.getTarget(X, Y, "entity")
+                self.o_Interact(gameObject, subject)
             else:
-                if legal:
-                    # Fill the new space
-                    self.lvlMap.setObjArray(newPos, gameObject)
-                    # empty the old space
-                    self.lvlMap.setObjArray(oldPos)
-                    # and inform the gameObj of it's new home
-                    gameObject.updatePos(newX, newY)
-                elif not legal:
-                    subject = self.lvlMap.getMapTile(newPos)
-                    self.o_Interact(gameObject, subject)
+                gameObject.updatePos(newX, newY)
+        self.lvlMap.addUpdates((oldX, oldY), (X, Y))
 
     def o_Interact(self, initObj, subject):
         """
@@ -197,6 +210,7 @@ class Game(object):
                 #  The subject now has modified damage applied
                 subject.applyDmg(dmg)
 
+
     def m_FindDrawnArea(self):
         """
         Using player map location this finds the area of the map to be
@@ -207,7 +221,7 @@ class Game(object):
         winX = self.wSize[0] / self.met[1]        # using win size
         winY = self.wSize[1] / (self.met[4] + 8)  # get viewable area
         # map max coord
-        ext = self.lvlMap.getMaxX(), self.lvlMap.getMaxY()
+        ext = (x, y) = self.lvlMap.getMax()
         if ext[0] < winX:   # |
             winX = ext[0]   # If map bounadary is greater than the
         if ext[1] < winY:   # boundary we got from window size then
@@ -215,7 +229,7 @@ class Game(object):
         win = (winX, winY)  # |
 
         half = (win[0] / 2, win[1] / 2)  # half max window coords
-        ply = self.player.getPos()       # player coords
+        ply = (x, y) = self.player.getPos()       # player coords
 
         start, end = [0, 0], [0, 0]
         for i in range(2):
@@ -232,26 +246,27 @@ class Game(object):
                 start[i] = 0                         # map is smaller
                 end[i] = ext[i]                      # than viewable area
 
-        return (start[0], start[1]), (end[0], end[1])  # minInd, maxInd
+        return start[0], start[1], end[0], end[1]  # minX, minY, maxX, maxY
 
-    def isBlocked(self, tile, x, y, bounds):
+    def isBlocked(self, passable, x, y, bounds):
         """
         Returns True if tile is blocked from light source
         """
-        return (tile is None or x < bounds[0] or y < bounds[1] or
-                x >= bounds[2] or y >= bounds[3])
+        return (not passable or x < bounds[0] or
+                y < bounds[1] or x >= bounds[2] or y >= bounds[3])
 
-    def m_FindLitArea(self, minInd, maxInd):
+    def m_FindLitArea(self, minX, minY, maxX, maxY):
         """
         Generates a list of tile coords to be lit/visible to player.
         Borrowed heavily from Python shadowcasting implementation on
         roguebasin.roguelikedevelopment.org direct: http://goo.gl/Bg5Qq
         """
         self.lit = []
-        self.lit.append(self.player.getPos())
-        ox, oy = self.lit[0][0], self.lit[0][1]
+        ox, oy = self.player.getPos()
+        self.lit.append((ox, oy))
+        #ox, oy = self.lit[0][0], self.lit[0][1]
         radius = self.player.getSight()
-        bounds = (minInd[0], minInd[1], maxInd[0], maxInd[1])
+        bounds = (minX, minY, maxX, maxY)
         for n in range(8):
             mult = (_E.mult[0][n], _E.mult[1][n], _E.mult[2][n], _E.mult[3][n])
             self.m_LightSect(ox, oy, 1, 1.0, 0.0, radius, bounds, mult)
@@ -268,8 +283,8 @@ class Game(object):
             blocked = False
             while relX <= 0:
                 relX += 1
-                actualX = ox + (relX * mult[0]) + (relY * mult[1])
-                actualY = oy + (relX * mult[2]) + (relY * mult[3])
+                actX = ox + (relX * mult[0]) + (relY * mult[1])
+                actY = oy + (relX * mult[2]) + (relY * mult[3])
                 lSlope = (relX - 0.5) / (relY + 0.5)
                 rSlope = (relX + 0.5) / (relY - 0.5)
                 if start < rSlope:
@@ -278,22 +293,25 @@ class Game(object):
                     break
                 else:
                     try:
-                        tile = self.lvlMap.getMapTile((actualX, actualY))
-                    except GameExceptions.NotValidMapLocation:
-                        tile = None
+                        passable = self.lvlMap.testTilePassable(actX, actY)
+                    except IndexError:
+                        passable = False
                     if relX * relX + relY * relY < radiusSquared and \
-                                 bounds[0] <= actualX < bounds[2] and \
-                                 bounds[1] <= actualY < bounds[3]:
-                        self.lit.append((actualX, actualY))
+                                 bounds[0] <= actX < bounds[2] and \
+                                 bounds[1] <= actY < bounds[3]:
+                        self.lit.append((actX, actY))
+                        #if (actualX, actualY) not in self.seen:
+                            ## tile has not been seen yet. add it to list
+                            #self.seen[actualX][actualY] =
                     if blocked:
-                        if self.isBlocked(tile, actualX, actualY, bounds):
+                        if self.isBlocked(passable, actX, actY, bounds):
                             new_start = rSlope
                             continue
                         else:
                             blocked = False
                             start = new_start
                     else:
-                        if self.isBlocked(tile, actualX, actualY, bounds):
+                        if self.isBlocked(passable, actX, actY, bounds):
                             if i < radius:
                                 blocked = True
                                 self.m_LightSect(ox, oy, i + 1, start, lSlope,
@@ -302,7 +320,29 @@ class Game(object):
             if blocked:
                 break
 
-    def newFrame(self):
+    def getLightColor(self, color, x2, y2, flicker):
+        """
+        Adjust tile color based on proximity to light
+        """
+        if (x2, y2) in self.lit:
+            sight = self.player.getSight()
+            sightInc = 1.0 / (sight + random.choice((-1, 0, 1)))
+            x1, y1 = self.player.getPos()
+            if (x1, y1) == (x2, y2):
+                return color
+            prox = sight - math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
+            adj = int(prox * (60 * sightInc)) + flicker
+            red = max(0, min(color[0] + adj * 2, 255))
+            green = max(0, min(color[1] + adj / 2, 255))
+            blue = min(255, max(color[2] - adj, 0))
+        else:
+            red = min(255, max(color[0] - 100, 0))
+            green = min(255, max(color[1] - 100, 0))
+            blue = min(255, max(color[2] - 75, 0))
+        tileColor = red, green, blue
+        return tileColor
+
+    def newFrame(self, flicker):
         """
         Draws the new frame, and then flips the display
         """
@@ -310,28 +350,24 @@ class Game(object):
         self.screen.fill(_E.black)
 
         # Blit GameObjects
-        minInd, maxInd = self.m_FindDrawnArea()
-        self.m_FindLitArea(minInd, maxInd)
-        # Here we could call the lighting function to generate a new
-        # list of lit squares
+        minX, minY, maxX, maxY = self.m_FindDrawnArea()
+        # flicker = int(random.random() * 30)
+        self.m_FindLitArea(minX, minY, maxX, maxY)
         drawX, drawY = 0, 0
-        for tile in self.lvlMap.drawMap(minInd, maxInd):
-            if tile[0] == 0:  # new row
+        for tile in self.lvlMap.iterLvl(minX, minY, maxX, maxY, self.lit):
+            img, color, bg = tile[0], tile[1], tile[2]
+            relX, relY = tile[3], tile[4]
+            X, Y = tile[5], tile[6]
+            if relX == 0 and drawX != 0:  # new row
                 drawX = 0
                 drawY += self.met[4] + 8
-            elif tile[4] in self.lit:
-                if tile[0] in ['#', '@']:
-                    self.setFont("courbd.ttf", self.fontSize)
-                # print "tile: ", str(tile)
-                # print "tile[0]: ", str(tile[0])
-                mapText = self.font.render(tile[0], tile[1], tile[2], tile[3])
-                self.screen.blit(mapText, (drawX, drawY))
-                self.setFont(self.fontName, self.fontSize)
-                drawX += self.met[1]
-            else:  # draw a blank space
-                mapText = self.font.render(" ", 1, _E.black, _E.black)
-                self.screen.blit(mapText, (drawX, drawY))
-                drawX += self.met[1]
+            if img in ['#', '@']:
+                self.setFont("courbd.ttf", self.fontSize)
+            color = self.getLightColor(color, X, Y, flicker)
+            mapText = self.font.render(img, 1, color, bg)
+            self.screen.blit(mapText, (drawX, drawY))
+            self.setFont(self.fontName, self.fontSize)
+            drawX += self.met[1]
 
         # Limit to 20 frames per second
         self.clock.tick(60)

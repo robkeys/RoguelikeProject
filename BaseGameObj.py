@@ -15,20 +15,75 @@
 # You should have received a copy of the GNU General Public License
 # along with the software; If not, see <http://www.gnu.org/licenses/>.
 #--------------------------------------------------------------------------
-import GameExceptions
 from math import sqrt as sqrt
 import random
 import _ENV_VAR as _E
 
 
-class BaseGameObj(object):
+class BaseGameObj(object):  # Referred to as BaGaOb in docs & comments
 
-    def __init__(self, x=-1, y=-1):
-        self.setPos(x, y)     # The position of this object
-        self.img = random.choice(['.', '.', '.', "'", ',', ';', ':'])
-        self.color = random.choice([_E.grey01, _E.grey02, _E.grey03,
-                                    _E.grey04, _E.grey05])
-        self.space = None
+    def __init__(self, *args, **kwargs):
+        self.img = ""
+        self.color = ()
+        self.bg = ()
+        self.tag = None
+
+    def getTag(self):
+        """
+        Returns tag of BaGaOb.
+        """
+        return self.tag
+
+    def setImg(self, img):
+        """
+        Sets self.img which is the character that the map displays when
+        this BaGaOb is drawn
+
+        img - str - Currently the image is a string.
+        """
+        self.img = img
+
+    def setColor(self, color):
+        """
+        Sets self.color to the (r, g, b) value of the color to display when
+        this BaGaOb is drawn.
+
+        color - tuple - Tuple of three ints that range from 0 - 255
+        """
+        self.color = color
+
+    def setBG(self, bg):
+        """
+        Sets self.color to the (r, g, b) value of the color to display in
+        the background when this BaGaOb is drawn.
+
+        bg - tuple - Tuple of three ints that range from 0 - 255
+        """
+        self.bg = bg
+
+    def setTag(self, tag):
+        """
+        Sets self.tag to the specified string. The name should change?
+        """
+        self.tag = tag
+
+    def display(self):
+        """
+        Returns a img, color, and bg of the BaGaOb.
+
+        img - str - Currently the character that represents the BaGaOb.
+        color - tuple - The (red, green, blue) value of the BaGaOb
+        bg - tuple - The (red, green, blue) value of the BaGaOb
+        """
+        return self.img, self.color, self.bg
+
+
+class Entity(BaseGameObj):  # THIS IS PROBABLY BROKEN - LOTS OF CHANGES
+
+    def __init__(self, x, y):
+        super(Entity, self).__init__(x, y)
+        self.x, self.y = x, y
+        self.tag = "entity"
 
     def setPos(self, x, y):
         """
@@ -37,62 +92,23 @@ class BaseGameObj(object):
 
         x, y = int
         """
-        self.pos = (x, y)
+        self.x, self.y = x, y
 
     def getPos(self):
         """
         Returns tuple containing x, y position
         """
-        return self.pos
+        return self.x, self.y
 
-    def updatePos(self, changeInX, changeInY):
+    def updatePos(self, x, y):
         """
-        Sets a new tuple containing an update to self.pos. Assumes
-        position exists on map/screen.
-
-        changeInX, changeInY = Positive or Negative Integer.
+        Adds x, y to self.x, self.y
         """
-        self.pos = (self.pos[0] + changeInX, self.pos[1] + changeInY)
-
-    def getTile(self):
-        """
-        Returns a img, color, and bg of the tile
-        """
-        return self.img, self.color, self.bg
-
-    def testSpace(self):
-        """
-        Returns True if empty
-        """
-        if self.space is None:
-            return True
-        else:
-            return False
-
-    def fillSpace(self, gameObject):
-        """
-        Takes an object into itself. If the object is already full it throws
-        an error
-        """
-        if self.space is None:
-            self.space = gameObject
-        else:
-            print "SpaceOccupied"
-
-    def emptySpace(self):
-        """
-        Sets self.space to None
-        """
-        self.space = None
-
-    def getSpace(self):
-        """
-        Returns object in self.space. Assumes self.space has an object.
-        """
-        return self.space
+        self.x = self.x + x
+        self.y = self.y + y
 
 
-class Player(BaseGameObj):
+class Player(Entity):  # THIS IS PROBABLY BROKEN - LOTS OF CHANGES
 
     def __init__(self, x, y):
         super(Player, self).__init__(x, y)
@@ -102,7 +118,7 @@ class Player(BaseGameObj):
         self.types = ["pc"]  # dont call these types
         self.hitPoints = 10
         self.alive = True
-        self.sightRange = 20
+        self.sightRange = 12
         self.facing = (0, 1)  # represents the tile directly in front.
         self.baseDef = 0
         self.baseDodge = 0
@@ -122,9 +138,6 @@ class Player(BaseGameObj):
     def isAlive(self):
         return self.alive
 
-    def getSight(self):
-        return self.sightRange
-
     def isAggressive(self, subjTypes):  # Maybe charm effects can go here.
         """
         Recieves the subjects types and returns True if Hostile to the
@@ -134,6 +147,9 @@ class Player(BaseGameObj):
             if aType not in self.types:
                 return True
         return False
+
+    def getSight(self):
+        return self.sightRange
 
     def getDef(self):
         """
@@ -242,7 +258,8 @@ class Player(BaseGameObj):
     def __str__(self):
         return "You"
 
-class Zombie(Player):
+
+class Zombie(Player):  # THIS IS PROBABLY BROKEN - LOTS OF CHANGES
 
     def __init__(self, x, y):
         super(Zombie, self).__init__(x, y)
@@ -269,9 +286,8 @@ class Zombie(Player):
         else:
             return False
 
-    def move(self, playerPos):
-        x1, y1 = self.pos[0], self.pos[1]
-        x2, y2 = playerPos[0], playerPos[1]
+    def move(self, x2, y2):
+        x1, y1 = self.x, self.y
         x, y = 0, 0
         if self.detectPlayer(x1, y1, x2, y2):
             if x1 > x2:    # player x smaller

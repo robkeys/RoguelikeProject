@@ -15,6 +15,7 @@
 # along with the software; If not, see <http://www.gnu.org/licenses/>.
 #--------------------------------------------------------------------------
 
+
 class NotValidMapLocation(Exception):
     """
     Called when object cannot move into or generally interact with a
@@ -22,9 +23,26 @@ class NotValidMapLocation(Exception):
     """
     pass
 
+
+class LocationOccupied(Exception):
+    """
+    Called when object cannot move into a space because a Game Object is
+    already present.
+    """
+    pass
+
+
 class NotInBounds(Exception):
     """
     Called when a request for an x, y coord is not within the bounds of
     a map.
+    """
+    pass
+
+
+class InvalidGameObject(Exception):
+    """
+    Called when a given Game Object is not of the type required for the
+    operation it was given for.
     """
     pass
