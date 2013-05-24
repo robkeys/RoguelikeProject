@@ -17,15 +17,14 @@
 #--------------------------------------------------------------------------
 from math import sqrt as sqrt
 import random
-import _ENV_VAR as _E
 
 
 class BaseGameObj(object):  # Referred to as BaGaOb in docs & comments
 
     def __init__(self, *args, **kwargs):
-        self.img = ""
+        self.img = None
+        self.altImgs = []
         self.color = ()
-        self.bg = ()
         self.tag = None
 
     def getTag(self):
@@ -52,15 +51,6 @@ class BaseGameObj(object):  # Referred to as BaGaOb in docs & comments
         """
         self.color = color
 
-    def setBG(self, bg):
-        """
-        Sets self.color to the (r, g, b) value of the color to display in
-        the background when this BaGaOb is drawn.
-
-        bg - tuple - Tuple of three ints that range from 0 - 255
-        """
-        self.bg = bg
-
     def setTag(self, tag):
         """
         Sets self.tag to the specified string. The name should change?
@@ -69,13 +59,12 @@ class BaseGameObj(object):  # Referred to as BaGaOb in docs & comments
 
     def display(self):
         """
-        Returns a img, color, and bg of the BaGaOb.
+        Returns a img, color of the BaGaOb.
 
         img - str - Currently the character that represents the BaGaOb.
         color - tuple - The (red, green, blue) value of the BaGaOb
-        bg - tuple - The (red, green, blue) value of the BaGaOb
         """
-        return self.img, self.color, self.bg
+        return self.img, self.color
 
 
 class Entity(BaseGameObj):  # THIS IS PROBABLY BROKEN - LOTS OF CHANGES
@@ -112,9 +101,6 @@ class Player(Entity):  # THIS IS PROBABLY BROKEN - LOTS OF CHANGES
 
     def __init__(self, x, y):
         super(Player, self).__init__(x, y)
-        self.img = '@'
-        self.color = _E.blue
-        self.bg = _E.black
         self.types = ["pc"]  # dont call these types
         self.hitPoints = 10
         self.alive = True
@@ -263,8 +249,6 @@ class Zombie(Player):  # THIS IS PROBABLY BROKEN - LOTS OF CHANGES
 
     def __init__(self, x, y):
         super(Zombie, self).__init__(x, y)
-        self.img = 'Z'
-        self.color = _E.red
         self.alive = True
         self.sightRange = 10
         self.types = ["monster", "hostile", "undead", "hungry", "evil"]

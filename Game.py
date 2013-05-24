@@ -27,14 +27,13 @@ import _ENV_VAR as _E
 
 class Game(object):
 
-    def __init__(self):
+    def __init__(self, screen, wSize):
         # start pygame.
-        pygame.init()
-
+        # pygame.init()
         # pygame variables
 
-        self.wSize = [700, 500]  # <-- something better here
-        self.screen = pygame.display.set_mode(self.wSize, pygame.RESIZABLE)
+        self.wSize = wSize
+        self.screen = screen
         self.clock = pygame.time.Clock()
         self.font = None
         self.fontName = "cour.ttf"
@@ -44,6 +43,9 @@ class Game(object):
         # intial game objects.
         self.lvlMap = LvlMap.LvlMap(70, 50)
         self.player = BaseGameObj.Player(0, 0)
+        self.player.setImg(_E.tileImgs.getImgObj(0, 0))
+        self.player.setColor(_E.blue)
+        self.numMonsters = 10
         self.monsters = Monsters.Monsters()
 
         # map variables
@@ -113,14 +115,17 @@ class Game(object):
             else:
                 break
 
-    def o_GenMonsters(self, numMonsters):
+    def o_GenMonsters(self):
         """
         Finds a valid map location and inserts a monster.
         """
+        numMonsters = self.numMonsters
         lenX, lenY = self.lvlMap.getMax()
         for monster in xrange(numMonsters):
             self.monsters.addMonster((0, 0))
             newMonster = self.monsters.getMonster()
+            newMonster.setImg(_E.tileImgs.getImgObj(0, 6))
+            newMonster.setColor(_E.red)
             while True:
                 x = random.randrange(lenX)
                 y = random.randrange(lenY)
@@ -218,8 +223,8 @@ class Game(object):
 
         Returns - x, y - coords of top right corner of map area.
         """
-        winX = self.wSize[0] / self.met[1]        # using win size
-        winY = self.wSize[1] / (self.met[4] + 8)  # get viewable area
+        winX = self.wSize[0] / _E.tileSize  # using win size
+        winY = self.wSize[1] / _E.tileSize  # get viewable area
         # map max coord
         ext = (x, y) = self.lvlMap.getMax()
         if ext[0] < winX:   # |
@@ -339,7 +344,7 @@ class Game(object):
             red = min(255, max(color[0] - 100, 0))
             green = min(255, max(color[1] - 100, 0))
             blue = min(255, max(color[2] - 75, 0))
-        tileColor = red, green, blue
+        tileColor = (red, green, blue)
         return tileColor
 
     def newFrame(self, flicker):
@@ -355,19 +360,16 @@ class Game(object):
         self.m_FindLitArea(minX, minY, maxX, maxY)
         drawX, drawY = 0, 0
         for tile in self.lvlMap.iterLvl(minX, minY, maxX, maxY, self.lit):
-            img, color, bg = tile[0], tile[1], tile[2]
-            relX, relY = tile[3], tile[4]
-            X, Y = tile[5], tile[6]
+            img, color = tile[0], tile[1]
+            relX, relY = tile[2], tile[3]
+            X, Y = tile[4], tile[5]
             if relX == 0 and drawX != 0:  # new row
                 drawX = 0
-                drawY += self.met[4] + 8
-            if img in ['#', '@']:
-                self.setFont("courbd.ttf", self.fontSize)
+                drawY += _E.tileSize
             color = self.getLightColor(color, X, Y, flicker)
-            mapText = self.font.render(img, 1, color, bg)
-            self.screen.blit(mapText, (drawX, drawY))
-            self.setFont(self.fontName, self.fontSize)
-            drawX += self.met[1]
+            img = img.recolor(color)
+            self.screen.blit(img, (drawX, drawY))
+            drawX += _E.tileSize
 
         # Limit to 20 frames per second
         self.clock.tick(60)

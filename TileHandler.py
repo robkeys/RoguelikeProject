@@ -16,17 +16,33 @@
 #--------------------------------------------------------------------------
 import random
 import BaseGameObj
-import _ENV_VAR as _E
+import GraphicalTiles
+import _ENV_VAR as ENV
+
+WALL_DIRS = {(1, 0, 0, 0): 2,
+             (0, 1, 0, 0): 0,
+             (0, 0, 1, 0): 1,
+             (0, 0, 0, 1): 0,
+             (1, 0, 1, 0): 1,
+             (0, 1, 0, 1): 0,
+             (1, 1, 0, 0): 5,
+             (0, 1, 1, 0): 3,
+             (0, 0, 1, 1): 4,
+             (1, 0, 0, 1): 6,
+             (1, 1, 1, 0): 7,
+             (0, 1, 1, 1): 9,
+             (1, 0, 1, 1): 8,
+             (1, 1, 0, 1): 10,
+             (1, 1, 1, 1): 11}
 
 
 class Tile(BaseGameObj.BaseGameObj):
 
-    def __init__(self, ID, img, color, passable):
+    def __init__(self, ID, img, color, passable = False):
         super(Tile, self).__init__()
         self.ID = ID
         self.img = img
         self.color = color
-        self.bg = _E.black
         self.passable = passable
         self.tag = "tile"
 
@@ -44,6 +60,7 @@ class Tile(BaseGameObj.BaseGameObj):
 
         passable - bool - True if passable.
         """
+        assert type(passable) == bool
         self.passable = passable
 
     def getID(self):
@@ -62,13 +79,8 @@ class Tile(BaseGameObj.BaseGameObj):
 class TileHandler(object):
 
     def __init__(self):
+        self.tileImgs = GraphicalTiles.ImgHandler("sos1.0.png", ENV.tileSize, ENV.tileSize)
         self.tileDict = {}
-        self.tileImgs = ["#", ".", ",", ";", "'"]
-        self.tileInfo = {self.tileImgs[0]: [_E.white],
-                         self.tileImgs[1]: _E.cs_greys,
-                         self.tileImgs[2]: _E.cs_greys,
-                         self.tileImgs[3]: _E.cs_greys,
-                         self.tileImgs[4]: _E.cs_greys}
 
     def makeTile(self, x1, y1, x2, y2):
         """
@@ -76,18 +88,19 @@ class TileHandler(object):
         Will not create passable tiles on map edge.
         """
         rand = random.random()
-        if rand < .1 or x1 == 0 or x1 == x2 or y1 == 0 or y1 == y2:
-            imgInd = 0
-            passable = False
+        if rand < .1 or x1 == 0 or x1 >= x2 - 1 or y1 == 0 or y1 >= y2 - 1:
+            gY = 10                    # Y of graphic
+            gX = random.randrange(12)  # X or graphic
+            color = (238, 238, 204)
+            p = False  # not passable
         else:
-            imgInd = random.choice(xrange(1, len(self.tileImgs)))
-            passable = True
-        img = self.tileImgs[imgInd]
-        colorInd = random.choice(xrange(len(self.tileInfo[img])))
-        color = self.tileInfo[img][colorInd]
-        ID = str(imgInd) + str(colorInd)
-        self.tileDict[ID] = self.tileDict.get(ID,
-                                         Tile(ID, img, color, passable))
+            gY = 8                    # Y of graphic
+            gX = random.randrange(3)  # X of graphic
+            color = (138, 138, 104)
+            p = True  # passable
+        ID = (gX, gY)
+        img = self.tileImgs.getImgObj(gX, gY)
+        self.tileDict[ID] = self.tileDict.get(ID, Tile(ID, img, color, p))
         return self.tileDict[ID]
 
     def getTile(self, ID):
@@ -106,3 +119,20 @@ class TileHandler(object):
         """
         tile = self.tileDict[ID]
         tile.setColor(color)
+
+    def ChooseWall(self, n, s, e, w):
+        """
+        Takes a list of four boolean arguments that represent the presence of
+        walls around a central wall tile. The wall object that will most make
+        the wall appear seamless is returned.
+
+        n, s, e, w - in - 1 if wall present. 0 otherwise.
+        """
+        if (n, s, e, w) != (0, 0, 0, 0):
+            arrayX = WALL_DIRS[(n, s, e, w)]
+            ID = (arrayX, 10)
+            img = self.tileImgs.getImgObj(arrayX, 10)
+            color = (238, 238, 204)
+            p = False
+            self.tileDict[ID] = self.tileDict.get(ID, Tile(ID, img, color, p))
+            return self.tileDict[ID]

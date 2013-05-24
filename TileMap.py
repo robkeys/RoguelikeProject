@@ -31,11 +31,13 @@ class TileMap(Map.Map):
         It fills the array with None objects.
         """
         Y = 0
-        for Y in range(self.maxY + 1):
+        for Y in range(self.maxY):
             self.array.append([])
-            for X in range(self.maxX + 1):
-                tile = self.tiles.makeTile(X, Y, self.maxX - 1, self.maxY - 1)
-                self.array[Y].append(tile)
+            for X in range(self.maxX):
+                newTile = self.tiles.makeTile(X, Y, self.maxX, self.maxY)
+                # newTile.setColor(random.choice(ENV.cs_greys))
+                self.array[Y].append(newTile)
+        self.reflowWalls()
 
     def testMapPos(self, x, y):
         """
@@ -44,4 +46,48 @@ class TileMap(Map.Map):
 
         x, y - int - x, y coordinates of a tile to test.
         """
+
         return self.array[y][x].getPassable()
+
+    def testSurroundingWalls(self, x, y):
+        """
+        Starts at the array pos of a tile that is not passable, and then
+        tests and returns the passability of each of the surrounding walls
+        in the four cardinal directions.
+
+        x, y - int - Array position of the tile to test
+
+        returns:
+        dir[0], dir[1], dir[2], dir[3] - int - 1 if corresponding tile is not
+                                               passable. Otherwise 0.
+        """
+        dirs = []
+        for i in ((0, -1), (1, 0), (0, 1), (-1, 0)):
+            X, Y = x + i[0], y + i[1]
+            try:
+                passable = self.array[Y][X].getPassable()
+            except IndexError:
+                dirs.append(0)
+            else:
+                if X < 0 or X > self.maxX - 1 or Y < 0 or Y > self.maxY:
+                    dirs.append(0)
+                elif not passable:
+                    dirs.append(1)
+                else:
+                    dirs.append(0)
+        return dirs[0], dirs[1], dirs[2], dirs[3]
+
+    def reflowWalls(self):
+        """
+        Iterates over walls then tests passability of surrounding walls. Once
+        established it calls TileHandler to determine appropriate Tile obj.
+        """
+        for y, col in enumerate(self.array):
+            for x, tile in enumerate(col):
+                if not tile.getPassable() and tile is not None:
+                    n, s, e, w = self.testSurroundingWalls(x, y)
+                    if (n, s, e, w) == (0, 0, 0, 0):
+                        pass
+                    else:
+                        newImg = self.tiles.ChooseWall(n, s, e, w)
+                        self.array[y][x] = newImg

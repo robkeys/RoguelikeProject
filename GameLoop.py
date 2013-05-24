@@ -15,9 +15,11 @@
 # You should have received a copy of the GNU General Public License
 # along with the software; If not, see <http://www.gnu.org/licenses/>.
 #--------------------------------------------------------------------------
-import pygame
 import random
-import Game
+import pygame
+
+
+
 
 def flicker(lastVal, lastDir):
     if lastVal > 25 and lastDir == 1:
@@ -35,12 +37,16 @@ def flicker(lastVal, lastDir):
 
 #Loop until the user clicks the close button.
 def main():
-    done = False
-    game = Game.Game()
+    pygame.init()
+    wSize = [704, 512]
+    screen = pygame.display.set_mode(wSize, pygame.RESIZABLE)
+    import Game
+    game = Game.Game(screen, wSize)
     game.p_PlayerStartPos()
-    game.o_GenMonsters(10)
+    game.o_GenMonsters()
     flickVal = 15
     flickDir = 1
+    done = False
     # -------- Main Program Loop -----------
     while not done:
         for event in pygame.event.get():  # User did something

@@ -17,6 +17,7 @@
 import Map
 import TileMap
 import EntityMap
+import _ENV_VAR as ENV
 import GameExceptions as ERR
 
 
@@ -28,6 +29,8 @@ class LvlMap(object):
         self.entities = EntityMap.EntityMap(self.maxX, self.maxY)
         self.cache = Map.Map(self.maxX, self.maxY)
         self.updates = []  # stores pos of recent updates to limit calls
+        test = self.tiles.getArray()
+        self.maxY, self.maxX = len(test), len(test[0])
 
     def _getTargetVars(self, target):
         """
@@ -80,13 +83,12 @@ class LvlMap(object):
         returns:
         img - str - Currently the character of the object's display info.
         color - tuple - The (red, green, blue) value of cobject's display info.
-        bg - tuple - The (red, green, blue) value of object's display info.
         """
         if self.entities.getPos(x, y) is not None:
-            img, color, bg = self.entities.getPos(x, y).display()
+            img, color = self.entities.getPos(x, y).display()
         else:
-            img, color, bg = self.tiles.getPos(x, y).display()
-        return img, color, bg
+            img, color = self.tiles.getPos(x, y).display()
+        return img, color
 
     def getDisplayFromCache(self, x, y):
         """
@@ -97,10 +99,9 @@ class LvlMap(object):
         returns:
         img - str - Currently the character of the cached display info.
         color - tuple - The (red, green, blue) value of cached display info.
-        bg - tuple - The (red, green, blue) value of cached display info.
         """
         disp = self.cache.getPos(x, y)
-        return disp[0], disp[1], disp[2]
+        return disp[0], disp[1]
 
     def addUpdates(self, *args):
         """
@@ -130,9 +131,8 @@ class LvlMap(object):
 
         returns:
         img - str - Currently the character of the referenced display info.
-        color - tuple - The (red, green, blue) value of referenced display info.
-        bg - tuple - The (red, green, blue) value of referenced display info.
-        relativeX, relativeY - int - Coords of tile relative to x1, x2 as 0, 0.
+        color - tuple - The (red, green, blue) val of referenced display info.
+        relativeX, relativeY - int - Pos of tile relative to x1, x2 as 0, 0.
         """
         relY = -1
         for Y in range(y1, y2):
@@ -143,24 +143,23 @@ class LvlMap(object):
                 p = (X, Y)  # p as x, y Position
                 toBeCached = True
                 if p in lit or (p in lit and p in self.updates):
-                    img, color, bg = self.getDisplay(X, Y)
+                    img, color = self.getDisplay(X, Y)
                 elif p in lit and p not in self.updates:
                     if self.cache.getPos(X, Y) is None:
-                        img, color, bg = self.getDisplay(X, Y)
+                        img, color = self.getDisplay(X, Y)
                     else:
                         toBeCached = False
-                        img, color, bg = self.getDisplayFromCache(X, Y)
+                        img, color = self.getDisplayFromCache(X, Y)
                 else:
                     toBeCached = False
                     if self.cache.getPos(X, Y) is None:
-                        img = " "
+                        img = ENV.tileImgs.getImgObj(-1, -1)
                         color = (0, 0, 0)
-                        bg = (0, 0, 0)
                     else:
-                        img, color, bg = self.getDisplayFromCache(X, Y)
+                        img, color = self.getDisplayFromCache(X, Y)
                 if toBeCached:
-                    self.cache.setPos(X, Y, (img, color, bg))
-                yield (img, color, bg, relX, relY, X, Y)
+                    self.cache.setPos(X, Y, (img, color))
+                yield (img, color, relX, relY, X, Y)
         self.updates = []
 
     def mvTarget(self, x1, y1, target):
